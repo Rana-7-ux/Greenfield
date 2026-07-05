@@ -1,10 +1,49 @@
 /* app/globals.css */
+
 @import "tailwindcss";
 
-@theme {
+
+
+:root {
+
   /* Adding our premium Amazon/Flipkart branding engine tokens here */
+
   --color-brand-primary: #febd69;    /* Amazon Amber */
+
   --color-brand-secondary: #232f3e;  /* Dark Slate Nav */
+
   --color-brand-blue: #131921;       /* Premium Deep Dark */
+
   --color-brand-accent: #2874f0;     /* Flipkart Blue */
+
+}
+
+/* Premium Horizontal Slide-Fade Transitions */
+
+@keyframes realisticSlideOut {
+
+  0% {
+
+    opacity: 1;
+
+    transform: translateX(0);
+
+  }
+
+  100% {
+
+    opacity: 0;
+
+    transform: translateX(-12px); /* Smoothly glides slightly left as it disappears */
+
+  }
+
+}
+
+
+
+.animate-slide-out {
+
+  animation: realisticSlideOut 0.25s cubic-bezier(0.5, 1, 0.5, 1) forwards;
+
 }

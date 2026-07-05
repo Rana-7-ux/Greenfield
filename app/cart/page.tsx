@@ -1,171 +1,410 @@
 // app/cart/page.tsx
+
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-// Go up two levels to reach the root folder since app/cart is nested
-import { useCart } from "../../context/CartContext";   // Changed from '../' to '../../'
-import Navbar from "../../components/Navbar";         // Changed from '../' to '../../'
-import { ArrowLeft, Trash2, ShoppingBag, CreditCard, ShieldCheck } from "lucide-react";
 
-// ... rest of your cart page code remains exactly the same!
+
+import React, { useState, useEffect } from "react";
+
+import Link from "next/link";
+
+import Image from "next/image";
+
+import { useCart } from "../../context/CartContext";
+
+import { createClient } from "../../lib/supabase";
+
+import Navbar from "../../components/Navbar";
+
+import { Trash2, ShoppingBag, ArrowRight, Minus, Plus, Loader2 } from "lucide-react";
+
+import type { User } from "@supabase/supabase-js";
+
+
 
 export default function CartPage() {
+
   const { cart, addToCart, removeFromCart, clearCart } = useCart();
-  const [mounted, setMounted] = useState(false);
+
+  const [user, setUser] = useState<User | null>(null);
+
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  const supabase = createClient();
+
+
+
+  const totalItemsCount = cart.reduce((acc: number, item) => acc + item.quantity, 0);
+
+  const totalPrice = cart.reduce((acc: number, item) => acc + item.price * item.quantity, 0);
+
+
+
+  // 1. Prevent Server Component hydration mismatched builds
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
 
-  if (!mounted) {
+    setIsMounted(true);
+
+    async function getUserSession() {
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      setUser(session?.user || null);
+
+    }
+
+    getUserSession();
+
+  }, [supabase]);
+
+
+
+  const handleCheckout = async () => {
+
+    if (cart.length === 0) return;
+
+
+
+    if (!user) {
+
+      alert("Authentication Required! Please sign in");
+
+      return;
+
+    }
+
+
+
+    setCheckoutLoading(true);
+
+
+
+    try {
+
+      for (const item of cart) {
+
+        // 1. Fetch current database inventory with an explicit type cast
+
+        const { data: currentProduct, error: fetchError } = await supabase
+
+          .from("products")
+
+          .select("inventory_qty")
+
+          .eq("id", item.id)
+
+          .single() as { data: { inventory_qty: number } | null, error: any };
+
+
+
+        if (fetchError) throw fetchError;
+
+
+
+        // 2. Validate current stock limits safely
+
+        if (!currentProduct || !currentProduct.inventory_qty || currentProduct.inventory_qty < item.quantity) {
+
+          const availableQty = currentProduct?.inventory_qty || 0;
+
+          throw new Error(`Insufficient stock available for: "${item.title}". Only ${availableQty}kg remaining.`);
+
+        }
+
+
+
+        const exactNewQuantity = (currentProduct.inventory_qty as number) - item.quantity;
+
+
+
+       // 3. Mutate and decrement database row depth cleanly
+
+        const updatePayload: any = { inventory_qty: exactNewQuantity };
+
+       
+
+        // 3. Mutate and decrement database row depth cleanly
+
+        const { error: updateError } = await supabase
+
+          .from("products")
+
+          .update({ inventory_qty: exactNewQuantity } as never)
+
+          .eq("id", item.id);
+
+
+
+        if (updateError) throw updateError;
+
+      }
+
+      const newOrder = {
+
+        id: "GRN-" + Math.floor(100000 + Math.random() * 900000),
+
+        date: new Date().toLocaleDateString("en-IN", {
+
+          year: "numeric",
+
+          month: "long",
+
+          day: "numeric",
+
+        }),
+
+        items: cart.map(item => ({
+
+          id: item.id,
+
+          title: item.title,
+
+          price: item.price,
+
+          quantity: item.quantity,
+
+          image_url: item.image_url
+
+        })),
+
+        total: totalPrice,
+
+        status: "Order Confirmed",
+
+      };
+
+
+
+      if (typeof window !== "undefined") {
+
+        const existingOrders = JSON.parse(localStorage.getItem("greenfield_orders_history") || "[]");
+
+        localStorage.setItem("greenfield_orders_history", JSON.stringify([newOrder, ...existingOrders]));
+
+        clearCart();
+
+        alert("Order Placed! Harvest allotment successfully deducted from local farm inventory logs.");
+
+        window.location.href = "/profile";
+
+      }
+
+
+
+    } catch (err: any) {
+
+      alert(err.message || "An allocation error occurred during checkout processing.");
+
+      console.error("Checkout batch failure context:", err);
+
+    } finally {
+
+      setCheckoutLoading(false);
+
+    }
+
+  };
+
+
+
+  // If we haven't mounted yet, render a safe loading state so the server doesn't complain
+
+  if (!isMounted) {
+
     return (
-      <div className="min-h-screen bg-gray-50 animate-pulse">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-16 bg-gray-200 rounded-xl mt-8 h-96" />
-      </div>
-    );
-  }
 
-  // Real-world dynamic programmatic calculations
-  const totalItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const itemsSubtotal = cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  
-  // Enterprise rules: Bulk packaging adjustments & logistics tiers
-  const packingLogisticsFee = itemsSubtotal > 0 ? (itemsSubtotal > 500 ? 0 : 45) : 0;
-  const standardGSTTax = itemsSubtotal * 0.05; // 5% Agri-Tax tier allocation
-  const finalGrandTotal = itemsSubtotal + packingLogisticsFee + standardGSTTax;
+      <div className="min-h-screen bg-gray-50 w-full flex flex-col">
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+       
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-amber-600 transition-colors font-medium group">
-            <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-            Back to Marketplace
-          </Link>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight mt-3">Shopping Invoice Breakdown</h1>
-          <p className="text-sm text-gray-400 mt-1">Review your direct farm produce allocations securely.</p>
+        <div className="flex-1 flex items-center justify-center py-20">
+
+          <Loader2 className="animate-spin text-emerald-600" size={28} />
+
         </div>
 
+      </div>
+
+    );
+
+  }
+
+
+
+  return (
+
+    <div className="min-h-screen bg-gray-50 w-full">
+
+
+
+      <main className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+
+        <h1 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
+
+          <ShoppingBag className="text-amber-500" size={24} />
+
+          Your Allocation Basket
+
+        </h1>
+
+
+
         {cart.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-sm max-w-xl mx-auto mt-6">
-            <div className="w-16 h-16 bg-amber-50 text-amber-500 flex items-center justify-center rounded-2xl mx-auto mb-4">
-              <ShoppingBag size={28} />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">Your basket is currently empty</h2>
-            <p className="text-gray-400 text-sm mt-1 max-w-xs mx-auto">Add freshly harvested items from our local farmer inventory stream to begin checkout.</p>
-            <Link href="/" className="mt-5 inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-6 py-2.5 rounded-xl transition-all shadow-sm active:scale-95">
-              Browse Fresh Stock
+
+          <div className="bg-white border border-gray-100 rounded-2xl p-12 text-center shadow-sm max-w-md mx-auto">
+
+            <p className="text-sm font-bold text-gray-600">Your basket is currently empty.</p>
+
+            <p className="text-xs text-gray-400 mt-1 mb-6">Explore the catalog to allocate fresh yields.</p>
+
+            <Link href="/" className="inline-flex items-center justify-center bg-amber-500 text-white text-xs font-bold px-6 py-2.5 rounded-xl shadow-sm transition-transform active:scale-95">
+
+              Back to Marketplace
+
             </Link>
+
           </div>
+
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            
-            {/* Left side: Itemized Table Matrix Allocation */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-sm">
-                <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-4">
-                  <h2 className="font-bold text-gray-900 text-base">Allocated Cart Inventory ({totalItemsCount})</h2>
-                  <button onClick={clearCart} className="text-xs text-rose-500 hover:text-rose-600 font-bold flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-all">
-                    <Trash2 size={13} />
-                    Clear Entire Cart
-                  </button>
-                </div>
 
-                <div className="divide-y divide-gray-100">
-                  {cart.map((item) => {
-                    // programmatically calculate wholesale thresholds on this distinct layout tier
-                    const isBulk = item.quantity >= 5;
-                    const appliedPrice = isBulk ? item.product.price * 0.9 : item.product.price;
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-                    return (
-                      <div key={item.product.id} className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 first:pt-0 last:pb-0">
-                        <div className="flex items-center gap-4">
-                          <div className="relative w-16 h-16 bg-gray-50 border border-gray-100 rounded-xl overflow-hidden shrink-0">
-                            <Image src={item.product.image_url || "https://images.unsplash.com/photo-1610341592771-7329468f7d12"} alt={item.product.title} fill className="object-cover" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-gray-900 text-sm">{item.product.title}</h3>
-                            <p className="text-xs text-gray-400 mt-0.5">Origin: {item.product.farmer_name || "Verified Local Producer"}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs font-extrabold text-gray-900">₹{appliedPrice.toFixed(2)}/kg</span>
-                              {isBulk && <span className="bg-emerald-50 text-emerald-700 font-bold text-[9px] px-1.5 py-0.5 rounded border border-emerald-100 tracking-wide uppercase">Wholesale -10% Applied</span>}
-                            </div>
-                          </div>
-                        </div>
+            <div className="lg:col-span-2 space-y-3">
 
-                        {/* Interactive Counter Adjuster Blocks Matrix */}
-                        <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
-                          <div className="flex items-center bg-zinc-950 p-0.5 rounded-lg h-8 border border-zinc-800 shadow-sm">
-                            <button onClick={() => removeFromCart(item.product.id)} className="w-7 h-full flex items-center justify-center text-white hover:bg-zinc-800 rounded-md transition-colors font-bold text-sm">-</button>
-                            <span className="text-white text-xs font-black px-3 select-none">{item.quantity}</span>
-                            <button onClick={() => item.quantity < item.product.inventory_qty && addToCart(item.product)} className="w-7 h-full flex items-center justify-center text-white hover:bg-zinc-800 rounded-md transition-colors font-bold text-sm">+</button>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <span className="text-xs text-gray-400 block font-medium">Subtotal</span>
-                            <span className="font-black text-gray-900 text-sm tracking-tight">₹{(appliedPrice * item.quantity).toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+              {cart.map((item) => (
 
-            {/* Right Side: Programmatic Dynamic Receipt Ledger Panel */}
-            <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm sticky top-24">
-              <h2 className="font-extrabold text-gray-900 text-base mb-4 border-b border-gray-100 pb-3">Financial Order Summary</h2>
-              
-              <div className="space-y-3 text-sm mb-5">
-                <div className="flex items-center justify-between text-gray-500">
-                  <span>Gross Market Subtotal</span>
-                  <span className="font-bold text-gray-900">₹{itemsSubtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between text-gray-500">
-                  <span>Packaging & Cold Freight</span>
-                  <span className="font-bold text-gray-900">
-                    {packingLogisticsFee === 0 ? <span className="text-emerald-600 font-extrabold">FREE</span> : `₹${packingLogisticsFee.toFixed(2)}`}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-gray-500">
-                  <span>Agricultural GST (5%)</span>
-                  <span className="font-bold text-gray-900">₹{standardGSTTax.toFixed(2)}</span>
-                </div>
-                
-                {packingLogisticsFee > 0 && (
-                  <p className="text-[11px] text-amber-600 bg-amber-50/50 border border-amber-100 p-2 rounded-lg leading-normal mt-2">
-                    💡 Add <strong>₹{(500 - itemsSubtotal).toFixed(2)}</strong> more worth of organic produce to claim fully waived logistics delivery freight!
-                  </p>
-                )}
+                <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-4">
 
-                <div className="border-t border-gray-100 pt-3 mt-3 flex items-baseline justify-between">
-                  <span className="font-bold text-gray-900 text-base">Grand Payable Total</span>
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-gray-900 mr-0.5">₹</span>
-                    <span className="text-2xl font-black text-gray-900 tracking-tight">{finalGrandTotal.toFixed(2)}</span>
+                  <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-gray-50 border shrink-0">
+
+                    <Image src={item.image_url || "/placeholder.jpg"} alt={item.title} fill className="object-cover" sizes="64px" />
+
                   </div>
-                </div>
-              </div>
 
-              <button className="w-full bg-zinc-900 hover:bg-zinc-800 text-white font-extrabold text-sm py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 tracking-wide active:scale-[0.99]" onClick={() => alert("Proceeding to secure staging portal payload context...")}>
-                <CreditCard size={16} />
-                Proceed to Checkout
+                 
+
+                  <div className="flex-1 min-w-0">
+
+                    <h3 className="text-sm font-bold text-gray-800 truncate">{item.title}</h3>
+
+                    <p className="text-xs text-emerald-600 font-medium">₹{item.price} / kg</p>
+
+                  </div>
+
+
+
+                  <div className="flex items-center gap-2 border border-gray-200 rounded-xl p-1 bg-gray-50">
+
+                    <button onClick={() => removeFromCart(item.id)} className="p-1 text-gray-500 hover:bg-white rounded-lg transition-colors">
+
+                      <Minus size={14} />
+
+                    </button>
+
+                    <span className="text-xs font-bold text-gray-800 min-w-4 text-center">{item.quantity}</span>
+
+                    <button onClick={() => addToCart(item)} className="p-1 text-gray-500 hover:bg-white rounded-lg transition-colors">
+
+                      <Plus size={14} />
+
+                    </button>
+
+                  </div>
+
+
+
+                  <div className="text-right shrink-0 min-w-[70px]">
+
+                    <p className="text-sm font-black text-gray-900">₹{(item.price * item.quantity).toFixed(2)}</p>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+
+
+              <button onClick={clearCart} className="text-xs font-bold text-red-500 hover:text-red-600 flex items-center gap-1.5 px-2 py-1">
+
+                <Trash2 size={14} /> Clear Whole Basket
+
               </button>
 
-              <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-gray-400 font-medium">
-                <ShieldCheck size={14} className="text-emerald-600" />
-                <span>Encrypted direct-to-farm secure node connection</span>
-              </div>
             </div>
 
+
+
+            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
+
+              <h2 className="text-sm font-black text-gray-900 uppercase tracking-wider pb-2 border-b border-gray-50">
+
+                Reservation Costing
+
+              </h2>
+
+             
+
+              <div className="space-y-2 text-xs font-medium text-gray-500">
+
+                <div className="flex justify-between">
+
+                  <span>Aggregate Commodities</span>
+
+                  <span className="text-gray-800 font-bold">{totalItemsCount} kg</span>
+
+                </div>
+
+                <div className="flex justify-between">
+
+                  <span>Delivery Logistics</span>
+
+                  <span className="text-emerald-600 font-bold">FREE</span>
+
+                </div>
+
+              </div>
+
+
+
+              <div className="pt-3 border-t border-gray-50 flex justify-between items-baseline">
+
+                <span className="text-xs font-bold text-gray-800">Total Payable</span>
+
+                <span className="text-lg font-black text-amber-500">₹{totalPrice.toFixed(2)}</span>
+
+              </div>
+
+
+
+              {/* 💳 Updated Checkout Action Node */}
+
+            <Link
+
+              href="/checkout"
+
+              className="w-full bg-zinc-900 text-white text-xs font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2 hover:bg-zinc-800 transition-colors mt-2 text-center"
+
+            >
+
+              Execute Secure Checkout <ArrowRight size={14} />
+
+            </Link>
+
           </div>
-        )}
-      </main>
-    </div>
-  );
-}
+
+        </div>
+
+      )}
+
+    </main>
+
+  </div>
+
+);
+
+} 
+

@@ -1,10 +1,10 @@
 // context/CartContext.tsx
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import type { Product } from "../types";
 
-type CartItem = Product & { quantity: number };
+export type CartItem = Product & { quantity: number };
 
 type CartContextType = {
   cart: CartItem[];
@@ -16,19 +16,7 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  // Initialize state cleanly by checking if window storage records exist
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    if (typeof window !== "undefined") {
-      const savedCart = localStorage.getItem("greenfield_cart_cache");
-      return savedCart ? JSON.parse(savedCart) : [];
-    }
-    return [];
-  });
-
-  // Automatically write changes out to disk whenever the items shift
-  useEffect(() => {
-    localStorage.setItem("greenfield_cart_cache", JSON.stringify(cart));
-  }, [cart]);
+  const [cart, setCart] = useState<CartItem[]>([]);
 
   const addToCart = (product: Product) => {
     setCart((prev) => {
@@ -63,6 +51,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 export function useCart() {
   const context = useContext(CartContext);
-  if (!context) throw new Error("useCart must be executed directly within a CartProvider wrapper matrix.");
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider");
+  }
   return context;
 }

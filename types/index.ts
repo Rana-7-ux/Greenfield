@@ -9,14 +9,16 @@
  * Mirrors: public.products
  * Every agricultural listing sold on Greenfield Market.
  */
-export interface Product {
-  id: string;              // UUID — primary key
-  title: string;           // e.g. "Organic Basmati Rice"
-  price: number;           // NUMERIC — price per unit in ₹
-  farmer_name: string;     // Seller display name
-  inventory_qty: number;   // Current stock count
-  image_url: string;       // High-fidelity digital product imagery URL (replaces emoji)
-}
+// types/index.ts (or types.ts)
+export type Product = {
+  id: string;
+  title: string;
+  price: number;
+  image_url?: string;
+  farmer_name?: string;
+  inventory_qty: number;
+  category?: string; // 👈 Add this line to resolve the TypeScript compilation blockage
+};
 
 /**
  * Mirrors: public.orders

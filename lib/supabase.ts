@@ -1,14 +1,9 @@
-// lib/supabase.ts
-import { createClient as supabaseCreateClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
-// 1. MAKE SURE THE 'export' KEYWORD IS ADDED HERE:
-export function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase Environment Credentials in .env.local Node Matrix.");
-  }
-
-  return supabaseCreateClient(supabaseUrl, supabaseAnonKey);
-}
+// Initialize an official SSR browser client that handles cookie syncing automatically
+export const createClient = () => {
+  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+};

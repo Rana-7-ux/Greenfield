@@ -1,41 +1,116 @@
-// src/app/layout.tsx
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css"; 
+// app/layout.tsx
+
+"use client";
+
+
+
+import React from "react";
+
+import Navbar from "../components/Navbar";
+
+import Link from "next/link";
+
+import { usePathname } from "next/navigation";
+
 import { CartProvider } from "../context/CartContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// @ts-ignore: side-effect import of CSS without type declarations
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import "./globals.css";
 
-// Setting up production-ready SEO headers
-export const metadata: Metadata = {
-  title: "Greenfield Market | The Ultimate E-Commerce Experience",
-  description: "High-performance Amazon/Flipkart clone built with Next.js and Supabase.",
-};
+
 
 export default function RootLayout({
+
   children,
-}: Readonly<{
+
+}: {
+
   children: React.ReactNode;
-}>) {
+
+}) {
+
+  const pathname = usePathname();
+
+
+
+  const tabs = [
+
+    { name: "Home", href: "/" },
+
+    { name: "Farmer Portal", href: "/farmer" },
+
+    { name: "Track Orders", href: "/track-orders" }
+
+  ];
+
+
+
   return (
+
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 text-slate-950`}>
-        {/* Future Global Header will live here */}
-        
+
+      <body>
+
         <CartProvider>
+
+          <Navbar />
+
+         
+
+          {/* DYNAMIC SUBNAVBAR: Colors shift instantly based on your current path */}
+
+          <div className="w-full bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8">
+
+            <div className="max-w-7xl mx-auto h-10 flex items-center gap-6 text-xs font-semibold text-gray-600">
+
+              {tabs.map((tab) => {
+
+                const isActive = pathname === tab.href;
+
+                return (
+
+                  <Link
+
+                    key={tab.href}
+
+                    href={tab.href}
+
+                    className={`transition-colors relative py-2 ${
+
+                      isActive
+
+                        ? "text-gray-900 font-bold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-emerald-500"
+
+                        : "text-gray-500 hover:text-amber-600"
+
+                    }`}
+
+                  >
+
+                    {tab.name}
+
+                  </Link>
+
+                );
+
+              })}
+
+            </div>
+
+          </div>
+
+
+
           {children}
+
         </CartProvider>
-        
-        {/* Future Global Footer will live here */}
+
       </body>
+
     </html>
+
   );
-}
+
+} 
+
