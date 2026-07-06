@@ -15,7 +15,7 @@ export default function FarmerPortalPage() {
   const [activeTab, setActiveTab] = useState<"inventory" | "earnings">("inventory");
   const [myInventory, setMyInventory] = useState<any[]>([]);
   const [earningsLedger, setEarningsLedger] = useState<any[]>([]);
-  const [farmerInputName, setFarmerInputName] = useState<string>(""); // Synchronized Global Identity State
+  const [farmerInputName, setFarmerInputName] = useState<string>(""); // Global synchronized state
   const [loading, setLoading] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
  
@@ -42,13 +42,13 @@ export default function FarmerPortalPage() {
         fetchLiveEarningsStream();
       }
     }
-  }, [activeTab, farmerInputName]); // Automatically re-fetches listings if organization name transitions
+  }, [activeTab, farmerInputName]);
 
   async function getProfileName() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-      setFarmerInputName(name); // Directly anchors global presentation framework
+      setFarmerInputName(name);
     }
   }
 
@@ -58,12 +58,10 @@ export default function FarmerPortalPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("farmer_name", farmerInputName || currentFarmerName);
+        .eq("farmer_name", farmerInputName);
 
       if (!error && data) {
         setMyInventory(data);
@@ -97,7 +95,6 @@ export default function FarmerPortalPage() {
           const dateB = new Date(b.orders?.[0]?.created_at || 0).getTime();
           return dateB - dateA;
         });
-
         setEarningsLedger(sortedData);
       }
     } catch (err) {
@@ -118,7 +115,7 @@ export default function FarmerPortalPage() {
         .eq("id", productId);
 
       if (!error) {
-        alert("Crop removed successfully from the storefront.");
+        alert("Crop removed successfully.");
         fetchFarmerInventory();
       }
     } catch (err) {
@@ -129,7 +126,6 @@ export default function FarmerPortalPage() {
   const performanceMetrics = useMemo(() => {
     const map: Record<string, PerformanceMetric> = {};
     let grandTotal = 0;
-
     const items = earningsLedger || [];
     items.forEach((item) => {
       if (!item) return;
@@ -145,19 +141,14 @@ export default function FarmerPortalPage() {
       map[name].total_qty += qty;
       map[name].gross_earnings += amt;
     });
-
-    return {
-      breakdown: Object.values(map),
-      grandTotal
-    };
+    return { breakdown: Object.values(map), grandTotal };
   }, [earningsLedger]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     setSelectedFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
+    setPreviewUrl(URL.createObjectURL(file));
   };
 
   const handleUploadCrop = async (e: React.FormEvent) => {
@@ -167,7 +158,7 @@ export default function FarmerPortalPage() {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
-        alert("Authentication context required. Please log into your farmer account.");
+        alert("Authentication context required.");
         setFormSubmitting(false);
         return;
       }
@@ -181,10 +172,7 @@ export default function FarmerPortalPage() {
 
         const { error: storageError } = await supabase.storage
           .from("PRODUCT-IMAGES")
-          .upload(filePath, selectedFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          .upload(filePath, selectedFile, { cacheControl: '3600', upsert: false });
 
         if (!storageError) {
           const { data } = supabase.storage.from("PRODUCT-IMAGES").getPublicUrl(filePath);
@@ -206,7 +194,7 @@ export default function FarmerPortalPage() {
         ]);
 
       if (!error) {
-        alert(`Success! "${cropName}" listed under "${farmerInputName}" is now live.`);
+        alert(`Success! "${cropName}" listed live.`);
         setCropName("");
         setCropPrice("");
         setCropQty("");
@@ -226,17 +214,17 @@ export default function FarmerPortalPage() {
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-stone-800 antialiased">
       
-      {/* GLOBAL NAVBAR CONTAINER */}
+      {/* HEADER NAVIGATION LOGO BAR */}
       <nav className="w-full bg-orange-500 text-white px-6 py-4 flex items-center justify-between shadow-md">
-        <div className="flex items-center gap-2 font-black text-lg tracking-tight cursor-pointer">
+        <div className="flex items-center gap-2 font-black text-lg tracking-tight">
           <span>🍃 Greenfield Market</span>
         </div>
         
-        {/* Synchronized identity box updating in real-time */}
+        {/* Dynamic User Profile indicator box linking directly to input text state updates */}
         <div className="flex items-center gap-4 bg-orange-600/40 px-3 py-1.5 rounded-xl border border-orange-400/20">
           <div className="flex items-center gap-1.5 text-xs font-bold tracking-wide">
             <User size={14} />
-            <span>{farmerInputName || "Loading profile..."}</span>
+            <span>{farmerInputName || "Loading identity..."}</span>
           </div>
           <button 
             onClick={async () => {
@@ -244,7 +232,6 @@ export default function FarmerPortalPage() {
               window.location.href = "/farmer-login";
             }}
             className="text-orange-100 hover:text-white transition-colors"
-            title="Sign Out"
           >
             <LogOut size={14} />
           </button>
@@ -253,7 +240,7 @@ export default function FarmerPortalPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-10 space-y-8">
         
-        {/* Dashboard Profile Layout Container */}
+        {/* Dashboard Profile Hero Title Area */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-stone-200/60 pb-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-emerald-800 text-white rounded-2xl shadow-md shadow-emerald-800/10">
@@ -286,23 +273,24 @@ export default function FarmerPortalPage() {
 
         {activeTab === "inventory" ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: Add Crop Form */}
+            
+            {/* LEFT COLUMN FORM: CATALOG REGISTRY PARAMETERS */}
             <form onSubmit={handleUploadCrop} className="lg:col-span-5 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-6 shadow-xs space-y-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-black text-stone-900 flex items-center gap-1.5">
                   <Sprout size={16} className="text-emerald-800" /> Catalog Registry Parameters
                 </h3>
-                <p className="text-[11px] text-stone-400 font-medium">Provide real imagery assets alongside field collection weights.</p>
+                <p className="text-[11px] text-stone-400 font-medium">Provide real imagery assets alongside field collection parameters.</p>
               </div>
               
               <div className="space-y-2">
                 <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider">Crop Photography Asset</label>
-                <div className="border-2 border-dashed border-stone-200 bg-stone-50/50 rounded-2xl p-4 text-center transition-all hover:bg-stone-50 relative overflow-hidden group min-h-[140px] flex flex-col items-center justify-center gap-2">
+                <div className="border-2 border-dashed border-stone-200 bg-stone-50/50 rounded-2xl p-4 text-center relative overflow-hidden group min-h-[140px] flex flex-col items-center justify-center gap-2">
                   {previewUrl ? (
                     <>
                       <img src={previewUrl} alt="Preview" className="absolute inset-0 w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-stone-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 backdrop-blur-xs">
-                        <Camera size={14} /> Substitute Device Image
+                        <Camera size={14} /> Change Asset Image
                       </div>
                     </>
                   ) : (
@@ -311,34 +299,36 @@ export default function FarmerPortalPage() {
                         <Upload size={16} />
                       </div>
                       <p className="text-xs font-bold text-stone-700">Click to upload image file</p>
-                      <p className="text-[10px] text-stone-400 font-medium">Accepts true .jpg, .jpeg, .png files</p>
+                      <p className="text-[10px] text-stone-400 font-medium">Accepts .jpg, .jpeg, .png files</p>
                     </div>
                   )}
                   <input type="file" accept="image/jpeg, image/jpg, image/png" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
               </div>
 
+              {/* INPUT FIELDS PARAMETER CONTAINER BLOCK */}
               <div className="space-y-3">
-                {/* 1. Crop Variant Title Input */}
+                
+                {/* 1. Farmer / Organization Name Input Box */}
                 <div>
-                  <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Crop Title / Variant</label>
-                  <input type="text" required value={cropName} onChange={e => setCropName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Bananas" />
-                </div>
-
-                {/* 2. Custom Farmer / Org Input Box - Updates navbar on change */}
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Farmer / Organization Name</label>
+                  <label className="block text-[10px] font-bold text-stone-500 uppercase tracking-wider mb-1">Farmer / Organization Name</label>
                   <div className="relative flex items-center">
                     <input 
                       type="text" 
                       required 
                       value={farmerInputName} 
                       onChange={e => setFarmerInputName(e.target.value)} 
-                      className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs pl-9 pr-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors font-bold text-emerald-900" 
-                      placeholder="e.g., Greenfield Tech Cultivation" 
+                      className="w-full border border-stone-300 bg-white text-stone-900 text-xs pl-9 pr-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600 font-bold transition-all" 
+                      placeholder="Enter farm or organization name" 
                     />
                     <Building2 size={14} className="absolute left-3 text-stone-400" />
                   </div>
+                </div>
+
+                {/* 2. Crop Variant Title Input Box */}
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Crop Title / Variant</label>
+                  <input type="text" required value={cropName} onChange={e => setCropName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Organic Bananas" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -362,13 +352,13 @@ export default function FarmerPortalPage() {
                 </div>
               </div>
 
-              <button type="submit" disabled={formSubmitting} className="w-full py-3 bg-emerald-800 text-white font-bold text-xs rounded-xl hover:bg-emerald-900 transition-all cursor-pointer shadow-sm shadow-emerald-800/5 disabled:opacity-50 flex items-center justify-center gap-1.5">
+              <button type="submit" disabled={formSubmitting} className="w-full py-3 bg-emerald-800 text-white font-bold text-xs rounded-xl hover:bg-emerald-900 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {formSubmitting && <Loader2 size={12} className="animate-spin" />}
                 <span>Publish Active Crop Stream</span>
               </button>
             </form>
 
-            {/* Right Column: Display Active Crops Managed */}
+            {/* RIGHT COLUMN DISPLAY: ACTIVE CROPS LISTINGS */}
             <div className="lg:col-span-7 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-5 shadow-xs flex flex-col">
               <h3 className="text-xs font-black uppercase text-stone-400 tracking-wider mb-4">Your Live Marketplace Listings</h3>
               
@@ -387,7 +377,7 @@ export default function FarmerPortalPage() {
                       <div>
                         <div className="h-32 bg-stone-100 relative">
                           <img src={item.image || "/placeholder.jpg"} className="w-full h-full object-cover" alt={item.title} />
-                          <span className="absolute top-2 left-2 bg-stone-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded-full backdrop-blur-xs">
+                          <span className="absolute top-2 left-2 bg-stone-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded-full dataset-badge">
                             {item.category || "Unmapped"}
                           </span>
                         </div>
@@ -500,7 +490,7 @@ export default function FarmerPortalPage() {
                                   type="button"
                                   onClick={async () => {
                                     if (!item.order_id) return;
-                                    const userConfirmed = window.confirm("Are you sure you want to confirm this buyer order?");
+                                    const userConfirmed = window.confirm("Confirm order checkout transaction?");
                                     if (!userConfirmed) return;
 
                                     const { error } = await supabase
@@ -515,7 +505,7 @@ export default function FarmerPortalPage() {
                                       fetchLiveEarningsStream();
                                     }
                                   }}
-                                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black rounded-lg transition-all flex items-center gap-1 shadow-xs cursor-pointer tracking-wide uppercase"
+                                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black rounded-lg flex items-center gap-1 uppercase"
                                 >
                                   <CheckCircle2 size={12} /> Confirm Order
                                 </button>
@@ -534,12 +524,12 @@ export default function FarmerPortalPage() {
                                         .eq("id", item.order_id);
                                         
                                       if (error) {
-                                        alert(`Transition Error: ${error.message}`);
+                                        alert(`Error: ${error.message}`);
                                       } else {
                                         fetchLiveEarningsStream();
                                       }
                                     }}
-                                    className="border border-stone-200 bg-stone-50 text-[11px] font-bold px-2 py-1 rounded-md outline-none text-stone-700 cursor-pointer focus:border-emerald-700"
+                                    className="border border-stone-200 bg-stone-50 text-[11px] font-bold px-2 py-1 rounded-md text-stone-700 focus:border-emerald-700"
                                   >
                                     <option value="Confirmed">Confirmed</option>
                                     <option value="Processing">Processing</option>
