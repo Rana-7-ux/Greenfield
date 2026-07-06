@@ -31,7 +31,6 @@ export default function FarmerPortalPage() {
   const categories = ["Vegetables", "Fruits", "Grains", "Dairy", "Organic"];
 
   useEffect(() => {
-    // Sync the profile name immediately on mount
     getProfileName();
   }, []);
 
@@ -71,7 +70,7 @@ export default function FarmerPortalPage() {
     } catch (err) {
       console.error("Inventory track fault:", err);
     } finally {
-      loading && setLoading(false);
+      setLoading(false); // Clean fixed execution line
     }
   }
 
@@ -157,10 +156,8 @@ export default function FarmerPortalPage() {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
     const file = e.target.files[0];
     setSelectedFile(file);
-
     const objectUrl = URL.createObjectURL(file);
     setPreviewUrl(objectUrl);
   };
@@ -206,7 +203,7 @@ export default function FarmerPortalPage() {
             title: cropName,
             price: parseFloat(cropPrice),
             inventory_qty: parseInt(cropQty, 10),
-            image: finalMarketplaceUrl, // Updated key from image_url to image
+            image: finalMarketplaceUrl, // Ensured exact database alignment
             category: cropCategory,
             farmer_name: currentFarmerName,
           }
@@ -220,6 +217,8 @@ export default function FarmerPortalPage() {
         setSelectedFile(null);
         setPreviewUrl("");
         fetchFarmerInventory();
+      } else {
+        alert(`Database Error: ${error.message}`);
       }
     } catch (err) {
       console.error("Crop insertion failure:", err);
