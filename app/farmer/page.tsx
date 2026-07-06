@@ -197,8 +197,6 @@ export default function FarmerPortalPage() {
         }
       }
 
-      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-
       const { error } = await supabase
         .from("products")
         .insert([
@@ -206,9 +204,9 @@ export default function FarmerPortalPage() {
             title: cropName,
             price: parseFloat(cropPrice),
             inventory_qty: parseInt(cropQty, 10),
-            image: finalMarketplaceUrl, // Updated key from image_url to image
+            image: finalMarketplaceUrl,
             category: cropCategory,
-            farmer_name: currentFarmerName,
+            farmer_name: farmerName,
           }
         ]);
 
@@ -312,6 +310,12 @@ export default function FarmerPortalPage() {
                     <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Stock Vol (kg)</label>
                     <input type="number" required value={cropQty} onChange={e => setCropQty(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="70" />
                   </div>
+                </div>
+
+                {/* Farmer Name Input Field placed accurately below Price and Volume */}
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Farmer / Organization Name</label>
+                  <input type="text" required value={farmerName} onChange={e => setFarmerName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="Enter farm name" />
                 </div>
 
                 <div>
