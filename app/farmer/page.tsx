@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { createClient } from "../../lib/supabase";
-import { Sprout, IndianRupee, TrendingUp, BarChart3, PlusCircle, LayoutDashboard, Clock, Upload, Camera, Loader2, Trash2, CheckCircle2 } from "lucide-react";
+import { Sprout, IndianRupee, TrendingUp, BarChart3, PlusCircle, LayoutDashboard, Clock, Upload, Camera, Loader2, Trash2, CheckCircle2, User } from "lucide-react";
 
 interface PerformanceMetric {
   product_name: string;
@@ -15,6 +15,7 @@ export default function FarmerPortalPage() {
   const [activeTab, setActiveTab] = useState<"inventory" | "earnings">("inventory");
   const [myInventory, setMyInventory] = useState<any[]>([]);
   const [earningsLedger, setEarningsLedger] = useState<any[]>([]);
+  const [farmerName, setFarmerName] = useState<string>("Local Farmer Estate");
   const [loading, setLoading] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
  
@@ -30,12 +31,25 @@ export default function FarmerPortalPage() {
   const categories = ["Vegetables", "Fruits", "Grains", "Dairy", "Organic"];
 
   useEffect(() => {
+    // Sync the profile name immediately on mount
+    getProfileName();
+  }, []);
+
+  useEffect(() => {
     if (activeTab === "inventory") {
       fetchFarmerInventory();
     } else {
       fetchLiveEarningsStream();
     }
   }, [activeTab]);
+
+  async function getProfileName() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+      setFarmerName(name);
+    }
+  }
 
   async function fetchFarmerInventory() {
     setLoading(true);
@@ -44,6 +58,7 @@ export default function FarmerPortalPage() {
       if (!user) return;
 
       const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+      setFarmerName(currentFarmerName);
 
       const { data, error } = await supabase
         .from("products")
@@ -56,45 +71,44 @@ export default function FarmerPortalPage() {
     } catch (err) {
       console.error("Inventory track fault:", err);
     } finally {
-      setLoading(false);
+      loading && setLoading(false);
     }
   }
 
   async function fetchLiveEarningsStream() {
-  setLoading(true);
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+      setFarmerName(currentFarmerName);
 
-    // 1. Fetch data WITHOUT sorting by order_items.created_at at the database level
-    const { data, error } = await supabase
-      .from("order_items")
-      .select("id, product_name, quantity, price, farmer_name, order_id, orders!inner(status, created_at)")
-      .eq("farmer_name", currentFarmerName);
+      const { data, error } = await supabase
+        .from("order_items")
+        .select("id, product_name, quantity, price, farmer_name, order_id, orders!inner(status, created_at)")
+        .eq("farmer_name", currentFarmerName);
 
-    if (error) {
-      console.error("Database error fetching ledger:", error.message);
-      return;
+      if (error) {
+        console.error("Database error fetching ledger:", error.message);
+        return;
+      }
+
+      if (data) {
+        const sortedData = [...data].sort((a, b) => {
+          const dateA = new Date(a.orders?.[0]?.created_at || 0).getTime();
+          const dateB = new Date(b.orders?.[0]?.created_at || 0).getTime();
+          return dateB - dateA;
+        });
+
+        setEarningsLedger(sortedData);
+      }
+    } catch (err) {
+      console.error("Failed syncing earnings ledger:", err);
+    } finally {
+      setLoading(false);
     }
-
-    if (data) {
-      // 2. Safely sort by the parent order's creation time right here in JavaScript instead!
-      const sortedData = [...data].sort((a, b) => {
-        const dateA = new Date(a.orders?.[0]?.created_at || 0).getTime();
-        const dateB = new Date(b.orders?.[0]?.created_at || 0).getTime();
-        return dateB - dateA; // Newest orders first
-      });
-
-      setEarningsLedger(sortedData);
-    }
-  } catch (err) {
-    console.error("Failed syncing earnings ledger:", err);
-  } finally {
-    setLoading(false);
   }
-}
 
   async function handleDeleteCrop(productId: string) {
     const confirmDelete = confirm("Are you sure you want to remove this crop from the marketplace?");
@@ -143,7 +157,7 @@ export default function FarmerPortalPage() {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-   
+    
     const file = e.target.files[0];
     setSelectedFile(file);
 
@@ -164,21 +178,21 @@ export default function FarmerPortalPage() {
       }
 
       let finalMarketplaceUrl = "https://images.unsplash.com/photo-1595855759920-86582396756a?w=500&auto=format&fit=crop&q=60";
-     
+      
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         const filePath = `crops/${fileName}`;
 
         const { error: storageError } = await supabase.storage
-          .from("product-images")
+          .from("PRODUCT-IMAGES")
           .upload(filePath, selectedFile, {
             cacheControl: '3600',
             upsert: false
           });
 
         if (!storageError) {
-          const { data } = supabase.storage.from("product-images").getPublicUrl(filePath);
+          const { data } = supabase.storage.from("PRODUCT-IMAGES").getPublicUrl(filePath);
           if (data?.publicUrl) finalMarketplaceUrl = data.publicUrl;
         }
       }
@@ -192,7 +206,7 @@ export default function FarmerPortalPage() {
             title: cropName,
             price: parseFloat(cropPrice),
             inventory_qty: parseInt(cropQty, 10),
-            image_url: finalMarketplaceUrl,
+            image: finalMarketplaceUrl, // Updated key from image_url to image
             category: cropCategory,
             farmer_name: currentFarmerName,
           }
@@ -217,23 +231,32 @@ export default function FarmerPortalPage() {
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-stone-800 antialiased">
       <main className="max-w-6xl mx-auto px-4 py-10 space-y-8">
-       
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200/60 pb-6">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-black text-stone-900 tracking-tight">Producer Management Interface</h1>
-            <p className="text-xs font-semibold text-stone-400">Balance field yields, list retail price parameters, and evaluate historical order metrics.</p>
+        
+        {/* Dynamic Header & Profile Layout Container */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-stone-200/60 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-emerald-800 text-white rounded-2xl shadow-md shadow-emerald-800/10">
+              <User size={28} />
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
+                Verified Producer
+              </p>
+              <h1 className="text-2xl font-black text-stone-900 tracking-tight">{farmerName}</h1>
+              <p className="text-xs font-semibold text-stone-400">Manage listings, analyze earnings, and confirm active order logs.</p>
+            </div>
           </div>
 
-          <div className="bg-stone-200/50 p-1 rounded-xl flex items-center border border-stone-200/40 self-start sm:self-auto shrink-0">
+          <div className="bg-stone-200/50 p-1 rounded-xl flex items-center border border-stone-200/40 w-full md:w-auto shrink-0 shadow-inner">
             <button
               onClick={() => setActiveTab("inventory")}
-              className={`text-xs font-bold px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === "inventory" ? "bg-white text-stone-900 shadow-xs" : "text-stone-500 hover:text-stone-800"}`}
+              className={`flex-1 md:flex-initial text-xs font-bold px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeTab === "inventory" ? "bg-white text-stone-900 shadow-xs" : "text-stone-500 hover:text-stone-800"}`}
             >
               <PlusCircle size={14} /> Crop Management Hub
             </button>
             <button
               onClick={() => setActiveTab("earnings")}
-              className={`text-xs font-bold px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 ${activeTab === "earnings" ? "bg-emerald-800 text-white shadow-xs" : "text-stone-500 hover:text-stone-800"}`}
+              className={`flex-1 md:flex-initial text-xs font-bold px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 ${activeTab === "earnings" ? "bg-emerald-800 text-white shadow-xs" : "text-stone-500 hover:text-stone-800"}`}
             >
               <BarChart3 size={14} /> Live Earnings Ledger
             </button>
@@ -250,7 +273,7 @@ export default function FarmerPortalPage() {
                 </h3>
                 <p className="text-[11px] text-stone-400 font-medium">Provide real imagery assets alongside field collection weights.</p>
               </div>
-             
+              
               <div className="space-y-2">
                 <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider">Crop Photography Asset</label>
                 <div className="border-2 border-dashed border-stone-200 bg-stone-50/50 rounded-2xl p-4 text-center transition-all hover:bg-stone-50 relative overflow-hidden group min-h-[140px] flex flex-col items-center justify-center gap-2">
@@ -325,7 +348,7 @@ export default function FarmerPortalPage() {
                     <div key={item.id} className="bg-white border border-stone-200/60 rounded-xl overflow-hidden shadow-xs relative group flex flex-col justify-between">
                       <div>
                         <div className="h-32 bg-stone-100 relative">
-                          <img src={item.image_url || "/placeholder.jpg"} className="w-full h-full object-cover" alt={item.title} />
+                          <img src={item.image || "/placeholder.jpg"} className="w-full h-full object-cover" alt={item.title} />
                           <span className="absolute top-2 left-2 bg-stone-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded-full backdrop-blur-xs">
                             {item.category || "Unmapped"}
                           </span>
@@ -398,7 +421,7 @@ export default function FarmerPortalPage() {
                 )}
               </div>
 
-              {/* LIVE DISPATCH MANAGEMENT WITH SEPARATE CONFIRM ACTION BUTTON */}
+              {/* LIVE DISPATCH MANAGEMENT */}
               <div className="lg:col-span-7 bg-[#fcfbfa] border border-stone-200/30 p-5 rounded-2xl shadow-xs space-y-4">
                 <h3 className="text-xs font-black uppercase text-stone-400 tracking-wider flex items-center gap-1">
                   <Clock size={12} /> Live Settlement & Dispatch Feed
@@ -434,13 +457,10 @@ export default function FarmerPortalPage() {
                             
                             <div className="flex items-center gap-2">
                               {currentStatus === "Pending" ? (
-                                /* NEW CONFIRM ORDER ACTION BUTTON WITH BROWSER PROMPT ALERT */
                                 <button
                                   type="button"
                                   onClick={async () => {
                                     if (!item.order_id) return;
-
-                                    // Trigger window alert/confirmation modal matching requirements
                                     const userConfirmed = window.confirm("Are you sure you want to confirm this buyer order and notify their tracking portal?");
                                     if (!userConfirmed) return;
 
@@ -461,7 +481,6 @@ export default function FarmerPortalPage() {
                                   <CheckCircle2 size={12} /> Confirm Order
                                 </button>
                               ) : (
-                                /* IN-FLIGHT MILESTONE CONTROLLER DROPDOWN */
                                 <>
                                   <label className="text-[10px] font-bold text-stone-400 uppercase">Status Flow:</label>
                                   <select 
