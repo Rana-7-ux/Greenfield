@@ -63,7 +63,7 @@ export default function FarmerPortalPage() {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("farmer_name", currentFarmerName);
+        .eq("farmer_name", farmerName);
 
       if (!error && data) {
         setMyInventory(data);
@@ -87,7 +87,7 @@ export default function FarmerPortalPage() {
       const { data, error } = await supabase
         .from("order_items")
         .select("id, product_name, quantity, price, farmer_name, order_id, orders!inner(status, created_at)")
-        .eq("farmer_name", currentFarmerName);
+        .eq("farmer_name", farmerName);
 
       if (error) {
         console.error("Database error fetching ledger:", error.message);
@@ -197,6 +197,8 @@ export default function FarmerPortalPage() {
         }
       }
 
+      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+
       const { error } = await supabase
         .from("products")
         .insert([
@@ -204,9 +206,9 @@ export default function FarmerPortalPage() {
             title: cropName,
             price: parseFloat(cropPrice),
             inventory_qty: parseInt(cropQty, 10),
-            image: finalMarketplaceUrl,
+            image: finalMarketplaceUrl, // Updated key from image_url to image
             category: cropCategory,
-            farmer_name: farmerName,
+            farmer_name: farmerName
           }
         ]);
 
@@ -301,6 +303,20 @@ export default function FarmerPortalPage() {
                   <input type="text" required value={cropName} onChange={e => setCropName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Bananas" />
                 </div>
 
+                <div className="mb-4">
+  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">
+    Farmer Name / Farm Entity
+  </label>
+  <input
+    type="text"
+    placeholder="e.g., Rana Agricultural Farms"
+    value={farmerName}
+    onChange={(e) => setFarmerName(e.target.value)}
+    className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 text-gray-800"
+    required
+  />
+</div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Unit Price (₹)</label>
@@ -310,12 +326,6 @@ export default function FarmerPortalPage() {
                     <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Stock Vol (kg)</label>
                     <input type="number" required value={cropQty} onChange={e => setCropQty(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="70" />
                   </div>
-                </div>
-
-                {/* Farmer Name Input Field placed accurately below Price and Volume */}
-                <div>
-                  <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Farmer / Organization Name</label>
-                  <input type="text" required value={farmerName} onChange={e => setFarmerName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="Enter farm name" />
                 </div>
 
                 <div>
