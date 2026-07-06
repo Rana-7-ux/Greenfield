@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { createClient } from "../../lib/supabase";
-import { Sprout, IndianRupee, TrendingUp, BarChart3, PlusCircle, LayoutDashboard, Clock, Upload, Camera, Loader2, Trash2, CheckCircle2, User } from "lucide-react";
+import { Sprout, IndianRupee, TrendingUp, BarChart3, PlusCircle, LayoutDashboard, Clock, Upload, Camera, Loader2, Trash2, CheckCircle2, User, Building2, LogOut } from "lucide-react";
 
 interface PerformanceMetric {
   product_name: string;
@@ -15,7 +15,7 @@ export default function FarmerPortalPage() {
   const [activeTab, setActiveTab] = useState<"inventory" | "earnings">("inventory");
   const [myInventory, setMyInventory] = useState<any[]>([]);
   const [earningsLedger, setEarningsLedger] = useState<any[]>([]);
-  const [farmerName, setFarmerName] = useState<string>("Local Farmer Estate");
+  const [farmerInputName, setFarmerInputName] = useState<string>(""); // Synchronized Global Identity State
   const [loading, setLoading] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
  
@@ -35,18 +35,20 @@ export default function FarmerPortalPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "inventory") {
-      fetchFarmerInventory();
-    } else {
-      fetchLiveEarningsStream();
+    if (farmerInputName) {
+      if (activeTab === "inventory") {
+        fetchFarmerInventory();
+      } else {
+        fetchLiveEarningsStream();
+      }
     }
-  }, [activeTab]);
+  }, [activeTab, farmerInputName]); // Automatically re-fetches listings if organization name transitions
 
   async function getProfileName() {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-      setFarmerName(name);
+      setFarmerInputName(name); // Directly anchors global presentation framework
     }
   }
 
@@ -57,12 +59,11 @@ export default function FarmerPortalPage() {
       if (!user) return;
 
       const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-      setFarmerName(currentFarmerName);
 
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("farmer_name", currentFarmerName);
+        .eq("farmer_name", farmerInputName || currentFarmerName);
 
       if (!error && data) {
         setMyInventory(data);
@@ -70,7 +71,7 @@ export default function FarmerPortalPage() {
     } catch (err) {
       console.error("Inventory track fault:", err);
     } finally {
-      setLoading(false); // Clean fixed execution line
+      setLoading(false);
     }
   }
 
@@ -80,13 +81,10 @@ export default function FarmerPortalPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-      setFarmerName(currentFarmerName);
-
       const { data, error } = await supabase
         .from("order_items")
         .select("id, product_name, quantity, price, farmer_name, order_id, orders!inner(status, created_at)")
-        .eq("farmer_name", currentFarmerName);
+        .eq("farmer_name", farmerInputName);
 
       if (error) {
         console.error("Database error fetching ledger:", error.message);
@@ -194,8 +192,6 @@ export default function FarmerPortalPage() {
         }
       }
 
-      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-
       const { error } = await supabase
         .from("products")
         .insert([
@@ -203,14 +199,14 @@ export default function FarmerPortalPage() {
             title: cropName,
             price: parseFloat(cropPrice),
             inventory_qty: parseInt(cropQty, 10),
-            image: finalMarketplaceUrl, // Ensured exact database alignment
+            image: finalMarketplaceUrl,
             category: cropCategory,
-            farmer_name: currentFarmerName,
+            farmer_name: farmerInputName.trim(), 
           }
         ]);
 
       if (!error) {
-        alert(`Success! "${cropName}" is now live on the storefront.`);
+        alert(`Success! "${cropName}" listed under "${farmerInputName}" is now live.`);
         setCropName("");
         setCropPrice("");
         setCropQty("");
@@ -229,19 +225,45 @@ export default function FarmerPortalPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-stone-800 antialiased">
+      
+      {/* GLOBAL NAVBAR CONTAINER */}
+      <nav className="w-full bg-orange-500 text-white px-6 py-4 flex items-center justify-between shadow-md">
+        <div className="flex items-center gap-2 font-black text-lg tracking-tight cursor-pointer">
+          <span>🍃 Greenfield Market</span>
+        </div>
+        
+        {/* Synchronized identity box updating in real-time */}
+        <div className="flex items-center gap-4 bg-orange-600/40 px-3 py-1.5 rounded-xl border border-orange-400/20">
+          <div className="flex items-center gap-1.5 text-xs font-bold tracking-wide">
+            <User size={14} />
+            <span>{farmerInputName || "Loading profile..."}</span>
+          </div>
+          <button 
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.href = "/farmer-login";
+            }}
+            className="text-orange-100 hover:text-white transition-colors"
+            title="Sign Out"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
+      </nav>
+
       <main className="max-w-6xl mx-auto px-4 py-10 space-y-8">
         
-        {/* Dynamic Header & Profile Layout Container */}
+        {/* Dashboard Profile Layout Container */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-stone-200/60 pb-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-emerald-800 text-white rounded-2xl shadow-md shadow-emerald-800/10">
-              <User size={28} />
+              <Building2 size={26} />
             </div>
             <div className="space-y-0.5">
               <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-widest bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
-                Verified Producer
+                Verified Producer Workspace
               </p>
-              <h1 className="text-2xl font-black text-stone-900 tracking-tight">{farmerName}</h1>
+              <h1 className="text-2xl font-black text-stone-900 tracking-tight">{farmerInputName || "Local Farmer Estate"}</h1>
               <p className="text-xs font-semibold text-stone-400">Manage listings, analyze earnings, and confirm active order logs.</p>
             </div>
           </div>
@@ -297,9 +319,26 @@ export default function FarmerPortalPage() {
               </div>
 
               <div className="space-y-3">
+                {/* 1. Crop Variant Title Input */}
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Crop Title / Variant</label>
                   <input type="text" required value={cropName} onChange={e => setCropName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Bananas" />
+                </div>
+
+                {/* 2. Custom Farmer / Org Input Box - Updates navbar on change */}
+                <div>
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Farmer / Organization Name</label>
+                  <div className="relative flex items-center">
+                    <input 
+                      type="text" 
+                      required 
+                      value={farmerInputName} 
+                      onChange={e => setFarmerInputName(e.target.value)} 
+                      className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs pl-9 pr-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors font-bold text-emerald-900" 
+                      placeholder="e.g., Greenfield Tech Cultivation" 
+                    />
+                    <Building2 size={14} className="absolute left-3 text-stone-400" />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -339,7 +378,7 @@ export default function FarmerPortalPage() {
                 <div className="flex-1 flex flex-col justify-center items-center text-center py-12">
                   <div className="text-2xl mb-2">🚜</div>
                   <h4 className="text-xs font-black text-stone-800">No Crops Distributed Yet</h4>
-                  <p className="text-[11px] text-stone-400 max-w-xs mt-1 leading-relaxed">Use the registry panel to list items live on the store network.</p>
+                  <p className="text-[11px] text-stone-400 max-w-xs mt-1 leading-relaxed">No matching listings found live for organization "{farmerInputName || "Unassigned"}".</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto max-h-[500px] pr-1">
@@ -354,6 +393,7 @@ export default function FarmerPortalPage() {
                         </div>
                         <div className="p-3">
                           <h4 className="text-xs font-black text-stone-900 truncate">{item.title}</h4>
+                          <p className="text-[10px] text-stone-400 font-medium truncate mb-1">By: {item.farmer_name}</p>
                           <div className="flex items-center justify-between mt-1 text-[11px] font-semibold text-stone-500">
                             <span>Price: ₹{item.price}/kg</span>
                             <span>Stock: {item.inventory_qty}kg</span>
@@ -393,7 +433,7 @@ export default function FarmerPortalPage() {
                 <div className="p-3 rounded-xl bg-blue-50 text-blue-700"><LayoutDashboard size={20} /></div>
                 <div>
                   <p className="text-[10px] font-bold text-stone-400 tracking-wider">Active Order Triggers</p>
-                  <h3 className="text-xl font-black text-stone-900 mt-0.5">{earningsLedger.length} clear entries</h3>
+                  <h3 className="text-xl font-black text-stone-900 mt-0.5">{earningsLedger.length} entries</h3>
                 </div>
               </div>
             </div>
@@ -460,7 +500,7 @@ export default function FarmerPortalPage() {
                                   type="button"
                                   onClick={async () => {
                                     if (!item.order_id) return;
-                                    const userConfirmed = window.confirm("Are you sure you want to confirm this buyer order and notify their tracking portal?");
+                                    const userConfirmed = window.confirm("Are you sure you want to confirm this buyer order?");
                                     if (!userConfirmed) return;
 
                                     const { error } = await supabase
@@ -471,7 +511,7 @@ export default function FarmerPortalPage() {
                                     if (error) {
                                       alert(`Confirmation Error: ${error.message}`);
                                     } else {
-                                      alert("Order Confirmed! Tracking timeline updated.");
+                                      alert("Order Confirmed!");
                                       fetchLiveEarningsStream();
                                     }
                                   }}
