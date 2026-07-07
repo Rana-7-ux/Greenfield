@@ -10,15 +10,14 @@
  * Every agricultural listing sold on Greenfield Market.
  */
 // types/index.ts (or types.ts)
-export type Product = {
+export interface Product {
   id: string;
   title: string;
   price: number;
-  image?: string;
   farmer_name?: string;
-  inventory_qty: number;
-  category?: string; // 👈 Add this line to resolve the TypeScript compilation blockage
-};
+  inventory_qty?: number;
+  image?: string; // 👈 Add this line right here!
+}
 
 /**
  * Mirrors: public.orders

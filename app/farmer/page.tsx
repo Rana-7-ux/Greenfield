@@ -170,26 +170,38 @@ export default function FarmerPortalPage() {
         return;
       }
 
-      let finalMarketplaceUrl = "https://images.unsplash.com/photo-1595855759920-86582396756a?w=500&auto=format&fit=crop&q=60";
+      // 1. Fall back to your clean inline SVG variable if no image file is chosen at all
+      let finalMarketplaceUrl = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Crect width='500' height='500' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='28'%3ENo image%3C/text%3E%3C/svg%3E";
       
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         const filePath = `crops/${fileName}`;
 
+        // 2. Upload file to your Supabase Storage bucket 
+        // NOTE: Double check your dashboard to ensure 'PRODUCT-IMAGES' bucket exists!
         const { error: storageError } = await supabase.storage
-          .from("PRODUCT-IMAGES")
+          .from("PRODUCT-IMAGES") 
           .upload(filePath, selectedFile, {
             cacheControl: '3600',
             upsert: false
           });
 
-        if (!storageError) {
-          const { data } = supabase.storage.from("PRODUCT-IMAGES").getPublicUrl(filePath);
-          if (data?.publicUrl) finalMarketplaceUrl = data.publicUrl;
+        if (storageError) {
+          console.error("Storage upload error log:", storageError);
+          alert(`Storage Error: ${storageError.message}. Make sure the bucket 'PRODUCT-IMAGES' exists and is set to Public.`);
+          setFormSubmitting(false);
+          return;
+        }
+
+        // 3. Resolve public URL string path only if successful
+        const { data } = supabase.storage.from("PRODUCT-IMAGES").getPublicUrl(filePath);
+        if (data?.publicUrl) {
+          finalMarketplaceUrl = data.publicUrl;
         }
       }
 
+      // 4. Record insert update payload
       const { error } = await supabase
         .from("products")
         .insert([
@@ -198,10 +210,10 @@ export default function FarmerPortalPage() {
             price: parseFloat(cropPrice),
             inventory_qty: parseInt(cropQty, 10),
             image: finalMarketplaceUrl,
-            image_url: finalMarketplaceUrl, // Fixed: Populates both targets cleanly for full app compatibility
+            image_url: finalMarketplaceUrl, 
             category: cropCategory,
             farmer_name: farmerName,
-            user_id: user.id // Ties item securely to account
+            user_id: user.id 
           }
         ]);
 
