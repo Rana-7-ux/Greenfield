@@ -170,7 +170,7 @@ export default function FarmerPortalPage() {
         return;
       }
 
-      // 1. Fall back to your clean inline SVG variable if no image file is chosen at all
+      // Default inline SVG fallback if no image file is chosen at all
       let finalMarketplaceUrl = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Crect width='500' height='500' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='28'%3ENo image%3C/text%3E%3C/svg%3E";
       
       if (selectedFile) {
@@ -178,8 +178,7 @@ export default function FarmerPortalPage() {
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         const filePath = `crops/${fileName}`;
 
-        // 2. Upload file to your Supabase Storage bucket 
-        // NOTE: Double check your dashboard to ensure 'PRODUCT-IMAGES' bucket exists!
+        // Upload file to your Supabase Storage bucket 
         const { error: storageError } = await supabase.storage
           .from("PRODUCT-IMAGES") 
           .upload(filePath, selectedFile, {
@@ -187,21 +186,22 @@ export default function FarmerPortalPage() {
             upsert: false
           });
 
+        // Intercept upload structural blockers immediately
         if (storageError) {
-          console.error("Storage upload error log:", storageError);
-          alert(`Storage Error: ${storageError.message}. Make sure the bucket 'PRODUCT-IMAGES' exists and is set to Public.`);
+          console.error("Supabase Storage Error Details:", storageError);
+          alert(`Storage Upload Failed: ${storageError.message}\n\nMake sure the bucket 'PRODUCT-IMAGES' exists and your Row-Level Security (RLS) policies allow public anonymous uploads.`);
           setFormSubmitting(false);
-          return;
+          return; 
         }
 
-        // 3. Resolve public URL string path only if successful
+        // Resolve public URL string path only if successful
         const { data } = supabase.storage.from("PRODUCT-IMAGES").getPublicUrl(filePath);
         if (data?.publicUrl) {
           finalMarketplaceUrl = data.publicUrl;
         }
       }
 
-      // 4. Record insert update payload
+      // Record insert update payload
       const { error } = await supabase
         .from("products")
         .insert([
