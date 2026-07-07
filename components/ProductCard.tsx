@@ -14,16 +14,20 @@ export default function ProductCard({ product }: { product: Product }) {
   const cartItem = cart.find((item) => item.id === product.id);
   const currentQuantity = cartItem ? cartItem.quantity : 0;
 
+  // Premium fallback image url if no real image asset was uploaded by a farmer
+  const fallbackImage = "https://images.unsplash.com/photo-1595855759920-86582396756a?w=600&auto=format&fit=crop&q=60";
+
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
       <div>
         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-gray-50 border border-gray-50 mb-3">
           <Image
-            src={product.image_url || "/placeholder.jpg"}
+            src={product.image_url || fallbackImage}
             fill
             className="object-cover"
             alt={product.title}
             sizes="(max-w-768px) 100vw, 25vw"
+            unoptimized={true} // Bypasses Next.js strict hostname config restrictions for external storage bucket links
           />
           {product.inventory_qty !== undefined && product.inventory_qty > 0 && (
             <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-[10px] font-bold px-2 py-0.5 rounded-full text-gray-600 shadow-sm">

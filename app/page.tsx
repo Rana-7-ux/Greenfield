@@ -23,10 +23,10 @@ export default function HomePage() {
   useEffect(() => {
     async function initCatalogStream() {
       try {
-        // ✨ Fetching explicit column category fields from table configuration
+        // ✨ Aliased image column dynamically to image_url to maintain interface compatibility
         const { data, error } = await supabase
           .from("products")
-          .select("id, title, price, image_url, farmer_name, inventory_qty, category")
+          .select("id, title, price, image_url:image, farmer_name, inventory_qty, category")
           .order("title", { ascending: true });
 
         if (error) throw error;
