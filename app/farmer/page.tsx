@@ -198,6 +198,7 @@ export default function FarmerPortalPage() {
             price: parseFloat(cropPrice),
             inventory_qty: parseInt(cropQty, 10),
             image: finalMarketplaceUrl,
+            image_url: finalMarketplaceUrl, // Fixed: Populates both targets cleanly for full app compatibility
             category: cropCategory,
             farmer_name: farmerName,
             user_id: user.id // Ties item securely to account
@@ -296,7 +297,6 @@ export default function FarmerPortalPage() {
               <div className="space-y-3">
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Farmer Name / Farm Entity</label>
-                  {/* Now purely updates local visual display name without hijacking network calls */}
                   <input type="text" required value={farmerName} onChange={e => setFarmerName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Rana Agricultural Farms" />
                 </div>
 
@@ -350,7 +350,7 @@ export default function FarmerPortalPage() {
                     <div key={item.id} className="bg-white border border-stone-200/60 rounded-xl overflow-hidden shadow-xs relative group flex flex-col justify-between">
                       <div>
                         <div className="h-32 bg-stone-100 relative">
-                          <img src={item.image || "/placeholder.jpg"} className="w-full h-full object-cover" alt={item.title} />
+                          <img src={item.image_url || item.image || "/placeholder.jpg"} className="w-full h-full object-cover" alt={item.title} />
                           <span className="absolute top-2 left-2 bg-stone-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded-full backdrop-blur-xs">
                             {item.category || "Unmapped"}
                           </span>
