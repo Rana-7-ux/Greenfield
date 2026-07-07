@@ -16,8 +16,7 @@ export default function FarmerPortalPage() {
   const [myInventory, setMyInventory] = useState<any[]>([]);
   const [earningsLedger, setEarningsLedger] = useState<any[]>([]);
   const [farmerName, setFarmerName] = useState<string>("Local Farmer Estate");
-  const [userEmail, setUserEmail] = useState<string>("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [formSubmitting, setFormSubmitting] = useState(false);
  
   const [cropName, setCropName] = useState("");
@@ -31,38 +30,33 @@ export default function FarmerPortalPage() {
   const supabase = createClient();
   const categories = ["Vegetables", "Fruits", "Grains", "Dairy", "Organic"];
 
-  // Step 1: Get the authenticated profile configuration once on mount
+  // Fetch data cleanly on tab switch
   useEffect(() => {
-    async function setupProfile() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-        setFarmerName(name);
-        setUserEmail(user.email || "");
-      }
-    }
-    setupProfile();
-  }, []);
-
-  // FIXED: Depend on userEmail and activeTab so typing in the name field doesn't trigger infinite loops
-  useEffect(() => {
-    if (!userEmail) return;
-    
     if (activeTab === "inventory") {
       fetchFarmerInventory();
     } else {
       fetchLiveEarningsStream();
     }
-  }, [activeTab, userEmail]);
+  }, [activeTab]);
 
   async function fetchFarmerInventory() {
     setLoading(true);
     try {
-      // Query listings tied to this profile name state safely
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // Sync display name if not edited yet
+      const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+      setFarmerName(name);
+
+      // OG Match logic: secure retrieval via user ID matching
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("farmer_name", farmerName);
+        .eq("user_id", user.id);
 
       if (!error && data) {
         setMyInventory(data);
@@ -77,10 +71,16 @@ export default function FarmerPortalPage() {
   async function fetchLiveEarningsStream() {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("order_items")
         .select("id, product_name, quantity, price, farmer_name, order_id, orders!inner(status, created_at)")
-        .eq("farmer_name", farmerName);
+        .eq("user_id", user.id); // Secure lookup
 
       if (error) {
         console.error("Database error fetching ledger:", error.message);
@@ -199,7 +199,8 @@ export default function FarmerPortalPage() {
             inventory_qty: parseInt(cropQty, 10),
             image: finalMarketplaceUrl,
             category: cropCategory,
-            farmer_name: farmerName
+            farmer_name: farmerName,
+            user_id: user.id // Ties item securely to account
           }
         ]);
 
@@ -210,7 +211,6 @@ export default function FarmerPortalPage() {
         setCropQty("");
         setSelectedFile(null);
         setPreviewUrl("");
-        // Manually call reload once item is injected successfully
         fetchFarmerInventory();
       } else {
         alert(`Database Error: ${error.message}`);
@@ -296,6 +296,7 @@ export default function FarmerPortalPage() {
               <div className="space-y-3">
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Farmer Name / Farm Entity</label>
+                  {/* Now purely updates local visual display name without hijacking network calls */}
                   <input type="text" required value={farmerName} onChange={e => setFarmerName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Rana Agricultural Farms" />
                 </div>
 
