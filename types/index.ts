@@ -14,7 +14,7 @@ export type Product = {
   id: string;
   title: string;
   price: number;
-  image_url?: string;
+  image?: string;
   farmer_name?: string;
   inventory_qty: number;
   category?: string; // 👈 Add this line to resolve the TypeScript compilation blockage

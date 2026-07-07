@@ -16,13 +16,12 @@ export default function ProductCard({ product }: { product: Product }) {
   const cartItem = cart.find((item) => item.id === product.id);
   const currentQuantity = cartItem ? cartItem.quantity : 0;
 
-
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
       <div>
         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-gray-50 border border-gray-50 mb-3">
           <Image
-            src={product.image_url ?? fallbackImage}
+            src={product.image || fallbackImage}
             fill
             className="object-cover"
             alt={product.title}
