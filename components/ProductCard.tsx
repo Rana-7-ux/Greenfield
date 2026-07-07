@@ -7,6 +7,8 @@ import { useCart } from "../context/CartContext";
 import type { Product } from "../types";
 import { ShoppingBasket, Plus, Minus } from "lucide-react";
 
+const fallbackImage = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Crect width='500' height='500' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='28'%3ENo image%3C/text%3E%3C/svg%3E";
+
 export default function ProductCard({ product }: { product: Product }) {
   const { cart, addToCart, removeFromCart } = useCart();
 
@@ -14,15 +16,13 @@ export default function ProductCard({ product }: { product: Product }) {
   const cartItem = cart.find((item) => item.id === product.id);
   const currentQuantity = cartItem ? cartItem.quantity : 0;
 
-  // Premium fallback image url if no real image asset was uploaded by a farmer
-  const fallbackImage = "https://images.unsplash.com/photo-1595855759920-86582396756a?w=600&auto=format&fit=crop&q=60";
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-all hover:shadow-md">
       <div>
         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-gray-50 border border-gray-50 mb-3">
           <Image
-            src={product.image_url || fallbackImage}
+            src={product.image_url ?? fallbackImage}
             fill
             className="object-cover"
             alt={product.title}
