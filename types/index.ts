@@ -11,12 +11,15 @@
  */
 // types/index.ts (or types.ts)
 export interface Product {
-  id: string;
+  id: string; // or number
   title: string;
   price: number;
-  farmer_name?: string;
-  inventory_qty?: number;
-  image?: string; // 👈 Add this line right here!
+  inventory_qty: number;
+  farmerName?: string; // 👈 Add this line (use '?' if it can sometimes be null or missing)
+  category: string;
+  // ... other existing fields ...
+  
+  image_url?: string; // 👈 Add this line (use '?' if it can sometimes be null or missing)
 }
 
 /**

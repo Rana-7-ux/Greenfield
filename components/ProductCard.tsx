@@ -21,7 +21,8 @@ export default function ProductCard({ product }: { product: Product }) {
       <div>
         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-gray-50 border border-gray-50 mb-3">
           <Image
-            src={(product as any).image || fallbackImage}
+            // Change how you reference it or cast it safely:
+            src={(product as any).image_url || fallbackImage}
             fill
             className="object-cover"
             alt={product.title}
@@ -36,7 +37,7 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
 
         <h3 className="font-extrabold text-gray-800 text-sm truncate">{product.title}</h3>
-        <p className="text-[11px] text-gray-400 font-medium mb-2">🚜 Farm: {product.farmer_name || "Local Grower"}</p>
+        <p className="text-[11px] text-gray-400 font-medium mb-2">🚜 Farm: {product.farmerName || "Local Grower"}</p>
       </div>
 
       <div>
