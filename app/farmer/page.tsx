@@ -16,6 +16,7 @@ export default function FarmerPortalPage() {
   const [myInventory, setMyInventory] = useState<any[]>([]);
   const [earningsLedger, setEarningsLedger] = useState<any[]>([]);
   const [farmerName, setFarmerName] = useState<string>("Local Farmer Estate");
+  const [userEmail, setUserEmail] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [formSubmitting, setFormSubmitting] = useState(false);
  
@@ -30,38 +31,34 @@ export default function FarmerPortalPage() {
   const supabase = createClient();
   const categories = ["Vegetables", "Fruits", "Grains", "Dairy", "Organic"];
 
+  // Step 1: Get the authenticated profile configuration once on mount
   useEffect(() => {
-    // Sync the profile name immediately on mount
-    getProfileName();
+    async function setupProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+        setFarmerName(name);
+        setUserEmail(user.email || "");
+      }
+    }
+    setupProfile();
   }, []);
 
-  // FIXED: Re-fetch data whenever the active tab OR the farmerName changes
+  // FIXED: Depend on userEmail and activeTab so typing in the name field doesn't trigger infinite loops
   useEffect(() => {
+    if (!userEmail) return;
+    
     if (activeTab === "inventory") {
       fetchFarmerInventory();
     } else {
       fetchLiveEarningsStream();
     }
-  }, [activeTab, farmerName]);
-
-  async function getProfileName() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-      setFarmerName(name);
-    }
-  }
+  }, [activeTab, userEmail]);
 
   async function fetchFarmerInventory() {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      // Query listings by the current active state of farmerName text input field
+      // Query listings tied to this profile name state safely
       const { data, error } = await supabase
         .from("products")
         .select("*")
@@ -80,12 +77,6 @@ export default function FarmerPortalPage() {
   async function fetchLiveEarningsStream() {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
       const { data, error } = await supabase
         .from("order_items")
         .select("id, product_name, quantity, price, farmer_name, order_id, orders!inner(status, created_at)")
@@ -219,7 +210,10 @@ export default function FarmerPortalPage() {
         setCropQty("");
         setSelectedFile(null);
         setPreviewUrl("");
+        // Manually call reload once item is injected successfully
         fetchFarmerInventory();
+      } else {
+        alert(`Database Error: ${error.message}`);
       }
     } catch (err) {
       console.error("Crop insertion failure:", err);
