@@ -24,9 +24,10 @@ export default function HomePage() {
     async function initCatalogStream() {
       try {
         // ✨ Aliased image column dynamically to image_url to maintain interface compatibility
-        const { data, error } = await supabase
-          .from("products")
-          .select("id, title, price, image_url:image, farmer_name, inventory_qty, category")
+        // Look for this in your homepage / main market component:
+const { data, error } = await supabase
+  .from('products')
+  .select('id, title, price, inventory_qty, farmerName, category, image_url') // 👈 MAKE SURE image_url IS HERE!
           .order("title", { ascending: true });
 
         if (error) throw error;
