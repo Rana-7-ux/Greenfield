@@ -55,11 +55,12 @@ export default function FarmerPortalPage() {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-      setFarmerName(currentFarmerName);
-
+      // Query listings by the current active state of farmerName text input field
       const { data, error } = await supabase
         .from("products")
         .select("*")
@@ -71,7 +72,7 @@ export default function FarmerPortalPage() {
     } catch (err) {
       console.error("Inventory track fault:", err);
     } finally {
-      loading && setLoading(false);
+      setLoading(false);
     }
   }
 
@@ -79,10 +80,10 @@ export default function FarmerPortalPage() {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-      setFarmerName(currentFarmerName);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from("order_items")
@@ -197,8 +198,6 @@ export default function FarmerPortalPage() {
         }
       }
 
-      const currentFarmerName = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-
       const { error } = await supabase
         .from("products")
         .insert([
@@ -206,7 +205,7 @@ export default function FarmerPortalPage() {
             title: cropName,
             price: parseFloat(cropPrice),
             inventory_qty: parseInt(cropQty, 10),
-            image: finalMarketplaceUrl, // Updated key from image_url to image
+            image: finalMarketplaceUrl,
             category: cropCategory,
             farmer_name: farmerName
           }
@@ -299,23 +298,14 @@ export default function FarmerPortalPage() {
 
               <div className="space-y-3">
                 <div>
+                  <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Farmer Name / Farm Entity</label>
+                  <input type="text" required value={farmerName} onChange={e => setFarmerName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Rana Agricultural Farms" />
+                </div>
+
+                <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Crop Title / Variant</label>
                   <input type="text" required value={cropName} onChange={e => setCropName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Bananas" />
                 </div>
-
-                <div className="mb-4">
-  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">
-    Farmer Name / Farm Entity
-  </label>
-  <input
-    type="text"
-    placeholder="e.g., Rana Agricultural Farms"
-    value={farmerName}
-    onChange={(e) => setFarmerName(e.target.value)}
-    className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent placeholder-gray-400 text-gray-800"
-    required
-  />
-</div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
