@@ -21,7 +21,7 @@ export default function ProductCard({ product }: { product: Product }) {
       <div>
         <div className="relative w-full h-40 rounded-xl overflow-hidden bg-gray-50 border border-gray-50 mb-3">
           <Image
-            src={product.image || fallbackImage}
+            src={(product as any).image || fallbackImage}
             fill
             className="object-cover"
             alt={product.title}
