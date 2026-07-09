@@ -10,6 +10,18 @@ const nextConfig = {
     // your project has TypeScript type errors.
     ignoreBuildErrors: true,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cygxcbdopbzuldikalod.supabase.co',
+      },
+    ],
+  },
 };
 
 export default nextConfig;

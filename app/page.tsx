@@ -23,62 +23,60 @@ export default function HomePage() {
   useEffect(() => {
     async function initCatalogStream() {
       try {
-        // ✨ Aliased image column dynamically to image_url to maintain interface compatibility
-        // Look for this in your homepage / main market component:
-const { data, error } = await supabase
-  .from('products')
-  .select('id, title, price, inventory_qty, farmerName, category, image_url') // 👈 MAKE SURE image_url IS HERE!
-          .order("title", { ascending: true });
+        // Correctly structured database query string safely binding image records
+        // Replace your old .select() with this exact line:
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, title, price, inventory_qty, farmerName:farmer_name, category, image_url, image')
+        .order("title", { ascending: true });
 
         if (error) throw error;
         
         if (data) {
           const mappedData = (data as any[]).map((item) => {
             // Priority 1: Check if Database field row is populated cleanly
+            let itemCategory = "Vegetables"; // Absolute default fallback node
             if (item.category && item.category.trim() !== "") {
-              return {
-                ...item,
-                category: item.category.trim()
-              };
-            }
+              itemCategory = item.category.trim();
+            } else {
+              // Priority 2: Fallback matching array maps for legacy NULL rows
+              const titleLower = item.title?.toLowerCase() || "";
+              
+              const fruitKeywords = [
+                "orange", "apple", "banana", "mango", "strawberry", "strawberries", "grape", "berry", "berries",
+                "citrus", "lemon", "lime", "peach", "plum", "pear", "watermelon",
+                "melon", "papaya", "pomegranate", "pineapple", "cherry", "guava", "kiwi"
+              ];
 
-            // Priority 2: Fallback matching array maps for legacy NULL rows
-            const titleLower = item.title?.toLowerCase() || "";
-            
-            const fruitKeywords = [
-              "orange", "apple", "banana", "mango", "strawberry", "strawberries", "grape", "berry", "berries",
-              "citrus", "lemon", "lime", "peach", "plum", "pear", "watermelon",
-              "melon", "papaya", "pomegranate", "pineapple", "cherry", "guava", "kiwi"
-            ];
+              const grainKeywords = [
+                "basmati", "grain", "rice", "wheat", "oat", "barley", "millet",
+                "flour", "pulses", "dal", "lentil", "corn"
+              ];
 
-            const grainKeywords = [
-              "basmati", "grain", "rice", "wheat", "oat", "barley", "millet",
-              "flour", "pulses", "dal", "lentil", "corn"
-            ];
+              const dairyKeywords = [
+                "milk", "cheese", "butter", "paneer", "ghee", "curd", "yogurt", "cream"
+              ];
 
-            const dairyKeywords = [
-              "milk", "cheese", "butter", "paneer", "ghee", "curd", "yogurt", "cream"
-            ];
+              const organicKeywords = [
+                "mustard", "oil", "honey", "organic", "spice", "turmeric", "herbal"
+              ];
 
-            const organicKeywords = [
-              "mustard", "oil", "honey", "organic", "spice", "turmeric", "herbal"
-            ];
-
-            let cat = "Vegetables"; // Absolute default fallback node
-
-            if (fruitKeywords.some(keyword => titleLower.includes(keyword))) {
-              cat = "Fruits";
-            } else if (grainKeywords.some(keyword => titleLower.includes(keyword))) {
-              cat = "Grains";
-            } else if (dairyKeywords.some(keyword => titleLower.includes(keyword))) {
-              cat = "Dairy";
-            } else if (organicKeywords.some(keyword => titleLower.includes(keyword))) {
-              cat = "Organic";
+              if (fruitKeywords.some(keyword => titleLower.includes(keyword))) {
+                itemCategory = "Fruits";
+              } else if (grainKeywords.some(keyword => titleLower.includes(keyword))) {
+                itemCategory = "Grains";
+              } else if (dairyKeywords.some(keyword => titleLower.includes(keyword))) {
+                itemCategory = "Dairy";
+              } else if (organicKeywords.some(keyword => titleLower.includes(keyword))) {
+                itemCategory = "Organic";
+              }
             }
             
             return {
               ...item,
-              category: cat
+              category: itemCategory,
+              // Normalize image target fields dynamically to clear upstream UI consumption conflicts
+              image_url: item.image_url || item.image || null
             };
           });
           setProducts(mappedData as Product[]);
@@ -86,6 +84,7 @@ const { data, error } = await supabase
       } catch (err) {
         console.error("Database tracking link failed:", err);
       } finally {
+        // Graceful termination of core view lifecycle loading states
         setLoading(false);
       }
     }
