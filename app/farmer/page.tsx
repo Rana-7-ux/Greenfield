@@ -1,4 +1,3 @@
-// app/farmer/page.tsx
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -30,6 +29,18 @@ export default function FarmerPortalPage() {
   const supabase = createClient();
   const categories = ["Vegetables", "Fruits", "Grains", "Dairy", "Organic"];
 
+  // Initialize profile data on mount to ensure variables are hydrated
+  useEffect(() => {
+    async function initProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+        setFarmerName(name);
+      }
+    }
+    initProfile();
+  }, []);
+
   // Fetch data cleanly on tab switch
   useEffect(() => {
     if (activeTab === "inventory") {
@@ -37,7 +48,7 @@ export default function FarmerPortalPage() {
     } else {
       fetchLiveEarningsStream();
     }
-  }, [activeTab]);
+  }, [activeTab, farmerName]);
 
   async function fetchFarmerInventory() {
     setLoading(true);
@@ -68,7 +79,7 @@ export default function FarmerPortalPage() {
     }
   }
 
-  async function fetchLiveEarningsStream() {
+ async function fetchLiveEarningsStream() {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -77,32 +88,78 @@ export default function FarmerPortalPage() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("order_items")
-        .select("id, product_name, quantity, price, farmer_name, order_id, orders!inner(status, created_at)")
-        .eq("user_id", user.id); // Secure lookup
+      const profileUsername = user.user_metadata?.full_name || user.email?.split("@")[0] || "abhijeetrajrana0705";
+      const commercialFarmName = "Rana Agricultural Farms";
 
-      if (error) {
-        console.error("Database error fetching ledger:", error.message);
-        return;
-      }
+      // 1. Fetch raw datasets
+      const [orderItemsRes, productsRes, ordersRes] = await Promise.all([
+        supabase.from("order_items").select("*"),
+        supabase.from("products").select("*").eq("user_id", user.id),
+        supabase.from("orders").select("*")
+      ]);
 
-      if (data) {
-        const sortedData = [...data].sort((a, b) => {
-          const dateA = new Date(a.orders?.[0]?.created_at || 0).getTime();
-          const dateB = new Date(b.orders?.[0]?.created_at || 0).getTime();
-          return dateB - dateA;
-        });
+      const orderItems = orderItemsRes.data || [];
+      const userProducts = productsRes.data || [];
+      const ordersList = ordersRes.data || [];
 
-        setEarningsLedger(sortedData);
-      }
+      // ==========================================
+      // CRITICAL DIAGNOSTIC TELEMETRY LOGS
+      // Open your browser console (F12) to see these!
+      // ==========================================
+      console.log("--- LEDGER DIAGNOSTIC START ---");
+      console.log("Logged In User ID:", user.id);
+      console.log("Matching Target Farmer Name:", profileUsername);
+      console.log("Matching Target Farm Name:", commercialFarmName);
+      console.log("Your Products in DB:", userProducts);
+      console.log("All Raw Order Items in DB:", orderItems);
+      // ==========================================
+
+      const ownedProductIds = new Set(userProducts.map((p: any) => String(p.id)));
+      const ownedProductTitles = new Set(userProducts.map((p: any) => String(p.title || "").toLowerCase().trim()));
+      
+      const ordersMap = new Map<string, any>();
+      ordersList.forEach((o: any) => ordersMap.set(String(o.id), o));
+
+      const mySettledItems = orderItems.filter((item: any) => {
+        const idMatches = item.product_id ? ownedProductIds.has(String(item.product_id)) : false;
+        const currentItemTitle = String(item.product_name || "").toLowerCase().trim();
+        const titleMatches = ownedProductTitles.has(currentItemTitle);
+        const dbFarmerName = String(item.farmer_name || "").toLowerCase().trim();
+        const nameMatches = dbFarmerName === profileUsername.toLowerCase().trim() || 
+                            dbFarmerName === commercialFarmName.toLowerCase().trim();
+        const directUidMatches = item.user_id ? item.user_id === user.id : false;
+
+        // Log individual evaluation results to see why things are returning false
+        if (idMatches || titleMatches || nameMatches || directUidMatches) {
+          console.log(`✅ MATCH FOUND for Item: ${item.product_name || item.id}`);
+        }
+
+        return idMatches || titleMatches || nameMatches || directUidMatches;
+      }).map((item: any) => {
+        const linkedOrder = ordersMap.get(String(item.order_id));
+        return {
+          ...item,
+          orders: linkedOrder ? { status: linkedOrder.status, created_at: linkedOrder.created_at } : { status: "Pending", created_at: new Date().toISOString() }
+        };
+      });
+
+      console.log("Final Filtered Items Count:", mySettledItems.length);
+      console.log("--- LEDGER DIAGNOSTIC END ---");
+
+      const sortedData = mySettledItems.sort((a: any, b: any) => {
+        const dateA = new Date(a.orders?.created_at || 0).getTime();
+        const dateB = new Date(b.orders?.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+
+      setEarningsLedger(sortedData);
+
     } catch (err) {
-      console.error("Failed syncing earnings ledger:", err);
+      console.error("Failed syncing earnings ledger completely:", err);
     } finally {
       setLoading(false);
     }
   }
-
   async function handleDeleteCrop(productId: string) {
     const confirmDelete = confirm("Are you sure you want to remove this crop from the marketplace?");
     if (!confirmDelete) return;
@@ -170,7 +227,6 @@ export default function FarmerPortalPage() {
         return;
       }
 
-      // Default inline SVG fallback if no image file is chosen at all
       let finalMarketplaceUrl = "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Crect width='500' height='500' fill='%23f3f4f6'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%239ca3af' font-size='28'%3ENo image%3C/text%3E%3C/svg%3E";
       
       if (selectedFile) {
@@ -178,7 +234,6 @@ export default function FarmerPortalPage() {
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
         const filePath = `crops/${fileName}`;
 
-        // Upload file to your Supabase Storage bucket 
         const { error: storageError } = await supabase.storage
           .from("PRODUCT-IMAGES") 
           .upload(filePath, selectedFile, {
@@ -186,7 +241,6 @@ export default function FarmerPortalPage() {
             upsert: false
           });
 
-        // Intercept upload structural blockers immediately
         if (storageError) {
           console.error("Supabase Storage Error Details:", storageError);
           alert(`Storage Upload Failed: ${storageError.message}\n\nMake sure the bucket 'PRODUCT-IMAGES' exists and your Row-Level Security (RLS) policies allow public anonymous uploads.`);
@@ -194,14 +248,12 @@ export default function FarmerPortalPage() {
           return; 
         }
 
-        // Resolve public URL string path only if successful
         const { data } = supabase.storage.from("PRODUCT-IMAGES").getPublicUrl(filePath);
         if (data?.publicUrl) {
           finalMarketplaceUrl = data.publicUrl;
         }
       }
 
-      // Record insert update payload
       const { error } = await supabase
         .from("products")
         .insert([
@@ -239,7 +291,7 @@ export default function FarmerPortalPage() {
     <div className="min-h-screen bg-[#f7f5f0] text-stone-800 antialiased">
       <main className="max-w-6xl mx-auto px-4 py-10 space-y-8">
         
-        {/* Dynamic Header & Profile Layout Container */}
+        {/* Header Layout */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-stone-200/60 pb-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-emerald-800 text-white rounded-2xl shadow-md shadow-emerald-800/10">
@@ -344,7 +396,7 @@ export default function FarmerPortalPage() {
               </button>
             </form>
 
-            {/* Right Column: Display Active Crops Managed */}
+            {/* Right Column: Listings */}
             <div className="lg:col-span-7 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-5 shadow-xs flex flex-col">
               <h3 className="text-xs font-black uppercase text-stone-400 tracking-wider mb-4">Your Live Marketplace Listings</h3>
               
@@ -387,7 +439,6 @@ export default function FarmerPortalPage() {
             </div>
           </div>
         ) : (
-          /* LIVE EARNINGS LEDGER VIEW */
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-[#fcfbfa] border border-stone-200/30 p-5 rounded-2xl shadow-xs flex items-center gap-4">
@@ -401,7 +452,7 @@ export default function FarmerPortalPage() {
                 <div className="p-3 rounded-xl bg-amber-50 text-amber-700"><TrendingUp size={20} /></div>
                 <div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Total Units Claimed</p>
-                  <h3 className="text-xl font-black text-stone-900 mt-0.5">{earningsLedger.reduce((sum, i) => sum + (Number(i?.quantity) || 0), 0)} units</h3>
+                  <h3 className="text-xl font-black text-stone-900 mt-0.5">{earningsLedger.reduce((sum, i) => sum + (num => isNaN(num) ? 0 : num)(Number(i?.quantity)), 0)} units</h3>
                 </div>
               </div>
               <div className="bg-[#fcfbfa] border border-stone-200/30 p-5 rounded-2xl shadow-xs flex items-center gap-4">
@@ -417,7 +468,7 @@ export default function FarmerPortalPage() {
               <div className="lg:col-span-5 bg-[#fcfbfa] border border-stone-200/30 p-5 rounded-2xl shadow-xs space-y-4">
                 <h3 className="text-xs font-black uppercase text-stone-400 tracking-wider">Yield Performance Metrics</h3>
                 {loading ? (
-                  <Loader2 className="animate-spin text-emerald-800 mx-auto my-4" size={20} />
+                  <div className="py-4 text-center"><Loader2 className="animate-spin text-emerald-800 mx-auto" size={20} /></div>
                 ) : performanceMetrics.breakdown.length === 0 ? (
                   <p className="text-[11px] text-stone-400 py-4">No consumer distribution metrics tracked yet.</p>
                 ) : (
@@ -441,7 +492,7 @@ export default function FarmerPortalPage() {
                   <Clock size={12} /> Live Settlement & Dispatch Feed
                 </h3>
                 {loading ? (
-                  <Loader2 className="animate-spin text-emerald-800 mx-auto my-4" size={20} />
+                  <div className="py-4 text-center"><Loader2 className="animate-spin text-emerald-800 mx-auto" size={20} /></div>
                 ) : earningsLedger.length === 0 ? (
                   <p className="text-[11px] text-stone-400 py-4">Waiting for customer checkouts...</p>
                 ) : (
@@ -449,7 +500,10 @@ export default function FarmerPortalPage() {
                     {earningsLedger.map((item) => {
                       const rate = Number(item?.price) || 0;
                       const qty = Number(item?.quantity) || 0;
-                      const currentStatus = item.orders?.status || "Pending";
+                      
+                      // Safely handle array or singular nested object layouts from standard schema queries
+                      const orderDetails = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+                      const currentStatus = orderDetails?.status || "Pending";
 
                       return (
                         <div key={item.id} className="bg-white border border-stone-200/60 p-3 rounded-xl space-y-3">
