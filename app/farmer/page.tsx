@@ -15,7 +15,10 @@ export default function FarmerPortalPage() {
   const [myInventory, setMyInventory] = useState<any[]>([]);
   const [earningsLedger, setEarningsLedger] = useState<any[]>([]);
   const [farmerName, setFarmerName] = useState<string>("Local Farmer Estate");
-  const [loading, setLoading] = useState(true);
+  
+  // Split loading states to prevent dashboard-wide lockups
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [ledgerLoading, setLedgerLoading] = useState(true);
   const [formSubmitting, setFormSubmitting] = useState(false);
  
   const [cropName, setCropName] = useState("");
@@ -29,41 +32,57 @@ export default function FarmerPortalPage() {
   const supabase = createClient();
   const categories = ["Vegetables", "Fruits", "Grains", "Dairy", "Organic"];
 
-  // Initialize profile data on mount to ensure variables are hydrated
+  // Core Orchestration on Mount
   useEffect(() => {
-    async function initProfile() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-        setFarmerName(name);
+    async function initPortalData() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+          setFarmerName(name);
+        }
+        // Safely fire both data streams concurrently
+        await Promise.all([
+          fetchFarmerInventory(),
+          fetchLiveEarningsStream()
+        ]);
+      } catch (err) {
+        console.error("Portal initialization failure:", err);
+        setInventoryLoading(false);
+        setLedgerLoading(false);
       }
     }
-    initProfile();
+    
+    initPortalData();
+
+    // Setup Real-time channel tracking changes to 'order_items'
+    const ledgerSubscription = supabase
+      .channel("realtime-ledger-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*", 
+          schema: "public",
+          table: "order_items",
+        },
+        () => {
+          console.log("🔄 Real-time update detected in order items! Syncing ledger...");
+          fetchLiveEarningsStream();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ledgerSubscription);
+    };
   }, []);
 
-  // Fetch data cleanly on tab switch
-  useEffect(() => {
-    if (activeTab === "inventory") {
-      fetchFarmerInventory();
-    } else {
-      fetchLiveEarningsStream();
-    }
-  }, [activeTab, farmerName]);
-
   async function fetchFarmerInventory() {
-    setLoading(true);
+    setInventoryLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      if (!user) return;
 
-      // Sync display name if not edited yet
-      const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-      setFarmerName(name);
-
-      // OG Match logic: secure retrieval via user ID matching
       const { data, error } = await supabase
         .from("products")
         .select("*")
@@ -75,23 +94,19 @@ export default function FarmerPortalPage() {
     } catch (err) {
       console.error("Inventory track fault:", err);
     } finally {
-      setLoading(false);
+      setInventoryLoading(false);
     }
   }
 
- async function fetchLiveEarningsStream() {
-    setLoading(true);
+  async function fetchLiveEarningsStream() {
+    setLedgerLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      if (!user) return;
 
       const profileUsername = user.user_metadata?.full_name || user.email?.split("@")[0] || "abhijeetrajrana0705";
       const commercialFarmName = "Rana Agricultural Farms";
 
-      // 1. Fetch raw datasets
       const [orderItemsRes, productsRes, ordersRes] = await Promise.all([
         supabase.from("order_items").select("*"),
         supabase.from("products").select("*").eq("user_id", user.id),
@@ -101,18 +116,6 @@ export default function FarmerPortalPage() {
       const orderItems = orderItemsRes.data || [];
       const userProducts = productsRes.data || [];
       const ordersList = ordersRes.data || [];
-
-      // ==========================================
-      // CRITICAL DIAGNOSTIC TELEMETRY LOGS
-      // Open your browser console (F12) to see these!
-      // ==========================================
-      console.log("--- LEDGER DIAGNOSTIC START ---");
-      console.log("Logged In User ID:", user.id);
-      console.log("Matching Target Farmer Name:", profileUsername);
-      console.log("Matching Target Farm Name:", commercialFarmName);
-      console.log("Your Products in DB:", userProducts);
-      console.log("All Raw Order Items in DB:", orderItems);
-      // ==========================================
 
       const ownedProductIds = new Set(userProducts.map((p: any) => String(p.id)));
       const ownedProductTitles = new Set(userProducts.map((p: any) => String(p.title || "").toLowerCase().trim()));
@@ -129,11 +132,6 @@ export default function FarmerPortalPage() {
                             dbFarmerName === commercialFarmName.toLowerCase().trim();
         const directUidMatches = item.user_id ? item.user_id === user.id : false;
 
-        // Log individual evaluation results to see why things are returning false
-        if (idMatches || titleMatches || nameMatches || directUidMatches) {
-          console.log(`✅ MATCH FOUND for Item: ${item.product_name || item.id}`);
-        }
-
         return idMatches || titleMatches || nameMatches || directUidMatches;
       }).map((item: any) => {
         const linkedOrder = ordersMap.get(String(item.order_id));
@@ -143,9 +141,6 @@ export default function FarmerPortalPage() {
         };
       });
 
-      console.log("Final Filtered Items Count:", mySettledItems.length);
-      console.log("--- LEDGER DIAGNOSTIC END ---");
-
       const sortedData = mySettledItems.sort((a: any, b: any) => {
         const dateA = new Date(a.orders?.created_at || 0).getTime();
         const dateB = new Date(b.orders?.created_at || 0).getTime();
@@ -153,13 +148,13 @@ export default function FarmerPortalPage() {
       });
 
       setEarningsLedger(sortedData);
-
     } catch (err) {
       console.error("Failed syncing earnings ledger completely:", err);
     } finally {
-      setLoading(false);
+      setLedgerLoading(false);
     }
   }
+
   async function handleDeleteCrop(productId: string) {
     const confirmDelete = confirm("Are you sure you want to remove this crop from the marketplace?");
     if (!confirmDelete) return;
@@ -205,14 +200,21 @@ export default function FarmerPortalPage() {
     };
   }, [earningsLedger]);
 
+  const ledgerStatsSummary = useMemo(() => {
+    const totalUnits = earningsLedger.reduce((sum, item) => sum + (Number(item?.quantity) || 0), 0);
+    const activeTriggers = earningsLedger.filter((item) => {
+      const status = (item.orders?.status || "Pending").toLowerCase();
+      return status === "pending" || status === "processing" || status === "confirmed";
+    }).length;
+
+    return { totalUnits, activeTriggers };
+  }, [earningsLedger]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
-    
     const file = e.target.files[0];
     setSelectedFile(file);
-
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
+    setPreviewUrl(URL.createObjectURL(file));
   };
 
   const handleUploadCrop = async (e: React.FormEvent) => {
@@ -236,14 +238,10 @@ export default function FarmerPortalPage() {
 
         const { error: storageError } = await supabase.storage
           .from("PRODUCT-IMAGES") 
-          .upload(filePath, selectedFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          .upload(filePath, selectedFile, { cacheControl: '3600', upsert: false });
 
         if (storageError) {
-          console.error("Supabase Storage Error Details:", storageError);
-          alert(`Storage Upload Failed: ${storageError.message}\n\nMake sure the bucket 'PRODUCT-IMAGES' exists and your Row-Level Security (RLS) policies allow public anonymous uploads.`);
+          alert(`Storage Upload Failed: ${storageError.message}`);
           setFormSubmitting(false);
           return; 
         }
@@ -270,7 +268,7 @@ export default function FarmerPortalPage() {
         ]);
 
       if (!error) {
-        alert(`Success! "${cropName}" is now live on the storefront.`);
+        alert(`Success! "${cropName}" is now live.`);
         setCropName("");
         setCropPrice("");
         setCropQty("");
@@ -326,7 +324,7 @@ export default function FarmerPortalPage() {
 
         {activeTab === "inventory" ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: Add Crop Form */}
+            {/* Left Column: Form */}
             <form onSubmit={handleUploadCrop} className="lg:col-span-5 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-6 shadow-xs space-y-5">
               <div className="space-y-1">
                 <h3 className="text-sm font-black text-stone-900 flex items-center gap-1.5">
@@ -363,12 +361,10 @@ export default function FarmerPortalPage() {
                   <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Farmer Name / Farm Entity</label>
                   <input type="text" required value={farmerName} onChange={e => setFarmerName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Rana Agricultural Farms" />
                 </div>
-
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Crop Title / Variant</label>
                   <input type="text" required value={cropName} onChange={e => setCropName(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="e.g., Bananas" />
                 </div>
-
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">Unit Price (₹)</label>
@@ -379,7 +375,6 @@ export default function FarmerPortalPage() {
                     <input type="number" required value={cropQty} onChange={e => setCropQty(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors" placeholder="70" />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-1">System Target Category Mapping</label>
                   <select value={cropCategory} onChange={e => setCropCategory(e.target.value)} className="w-full border border-stone-200/60 bg-stone-50/80 text-stone-800 text-xs px-3 py-2.5 rounded-xl outline-none focus:border-emerald-600 transition-colors appearance-none cursor-pointer">
@@ -400,7 +395,7 @@ export default function FarmerPortalPage() {
             <div className="lg:col-span-7 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-5 shadow-xs flex flex-col">
               <h3 className="text-xs font-black uppercase text-stone-400 tracking-wider mb-4">Your Live Marketplace Listings</h3>
               
-              {loading ? (
+              {inventoryLoading ? (
                 <div className="flex-1 flex items-center justify-center py-12"><Loader2 className="animate-spin text-emerald-800" size={24} /></div>
               ) : myInventory.length === 0 ? (
                 <div className="flex-1 flex flex-col justify-center items-center text-center py-12">
@@ -452,14 +447,14 @@ export default function FarmerPortalPage() {
                 <div className="p-3 rounded-xl bg-amber-50 text-amber-700"><TrendingUp size={20} /></div>
                 <div>
                   <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Total Units Claimed</p>
-                  <h3 className="text-xl font-black text-stone-900 mt-0.5">{earningsLedger.reduce((sum, i) => sum + (num => isNaN(num) ? 0 : num)(Number(i?.quantity)), 0)} units</h3>
+                  <h3 className="text-xl font-black text-stone-900 mt-0.5">{ledgerStatsSummary.totalUnits} units</h3>
                 </div>
               </div>
               <div className="bg-[#fcfbfa] border border-stone-200/30 p-5 rounded-2xl shadow-xs flex items-center gap-4">
                 <div className="p-3 rounded-xl bg-blue-50 text-blue-700"><LayoutDashboard size={20} /></div>
                 <div>
                   <p className="text-[10px] font-bold text-stone-400 tracking-wider">Active Order Triggers</p>
-                  <h3 className="text-xl font-black text-stone-900 mt-0.5">{earningsLedger.length} clear entries</h3>
+                  <h3 className="text-xl font-black text-stone-900 mt-0.5">{ledgerStatsSummary.activeTriggers} clear entries</h3>
                 </div>
               </div>
             </div>
@@ -467,7 +462,7 @@ export default function FarmerPortalPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-5 bg-[#fcfbfa] border border-stone-200/30 p-5 rounded-2xl shadow-xs space-y-4">
                 <h3 className="text-xs font-black uppercase text-stone-400 tracking-wider">Yield Performance Metrics</h3>
-                {loading ? (
+                {ledgerLoading ? (
                   <div className="py-4 text-center"><Loader2 className="animate-spin text-emerald-800 mx-auto" size={20} /></div>
                 ) : performanceMetrics.breakdown.length === 0 ? (
                   <p className="text-[11px] text-stone-400 py-4">No consumer distribution metrics tracked yet.</p>
@@ -486,109 +481,111 @@ export default function FarmerPortalPage() {
                 )}
               </div>
 
-              {/* LIVE DISPATCH MANAGEMENT */}
-              <div className="lg:col-span-7 bg-[#fcfbfa] border border-stone-200/30 p-5 rounded-2xl shadow-xs space-y-4">
+              {/* LIVE DISPATCH MANAGEMENT TABLE */}
+              <div className="lg:col-span-7 bg-[#fcfbfa] border border-stone-200/30 p-5 rounded-2xl shadow-xs space-y-4 overflow-hidden">
                 <h3 className="text-xs font-black uppercase text-stone-400 tracking-wider flex items-center gap-1">
                   <Clock size={12} /> Live Settlement & Dispatch Feed
                 </h3>
-                {loading ? (
+                {ledgerLoading ? (
                   <div className="py-4 text-center"><Loader2 className="animate-spin text-emerald-800 mx-auto" size={20} /></div>
                 ) : earningsLedger.length === 0 ? (
                   <p className="text-[11px] text-stone-400 py-4">Waiting for customer checkouts...</p>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                    {earningsLedger.map((item) => {
-                      const rate = Number(item?.price) || 0;
-                      const qty = Number(item?.quantity) || 0;
-                      
-                      // Safely handle array or singular nested object layouts from standard schema queries
-                      const orderDetails = Array.isArray(item.orders) ? item.orders[0] : item.orders;
-                      const currentStatus = orderDetails?.status || "Pending";
+                  <div className="overflow-x-auto w-full border border-stone-200/50 rounded-xl bg-white max-h-96 overflow-y-auto">
+                    <table className="min-w-full divide-y divide-stone-200 text-left text-xs">
+                      <thead className="bg-stone-50 font-black uppercase text-stone-500 tracking-wider sticky top-0 z-10">
+                        <tr>
+                          <th className="px-4 py-3">Crop Asset</th>
+                          <th className="px-4 py-3 text-center">Qty</th>
+                          <th className="px-4 py-3 text-right">Payout</th>
+                          <th className="px-4 py-3 text-center">Status Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-stone-100 bg-white">
+                        {earningsLedger.map((item) => {
+                          const rate = Number(item?.price) || 0;
+                          const qty = Number(item?.quantity) || 0;
+                          const orderDetails = Array.isArray(item.orders) ? item.orders[0] : item.orders;
+                          const currentStatus = orderDetails?.status || "Pending";
 
-                      return (
-                        <div key={item.id} className="bg-white border border-stone-200/60 p-3 rounded-xl space-y-3">
-                          <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-                            <div>
-                              <p className="text-xs font-bold text-stone-800">{item.product_name || "Market Product Listing"}</p>
-                              <p className="text-[10px] text-stone-400 font-semibold">Qty: {qty} · Rate: ₹{rate}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-xs font-black text-emerald-800">+₹{(rate * qty).toFixed(2)}</span>
-                              <p className="text-[9px] text-stone-400 font-bold uppercase tracking-wide">Gross Allocation</p>
-                            </div>
-                          </div>
+                          return (
+                            <tr key={item.id} className="hover:bg-stone-50/50 transition-colors">
+                              <td className="px-4 py-3 font-semibold text-stone-800 whitespace-nowrap max-w-[150px] truncate">
+                                <div>
+                                  <p className="font-bold text-stone-900">{item.product_name || "Market Product"}</p>
+                                  <p className="text-[9px] text-stone-400 font-mono">#{item.order_id?.substring(0, 8)}</p>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-center text-stone-600 font-medium">
+                                {qty} kg
+                              </td>
+                              <td className="px-4 py-3 text-right font-bold text-emerald-800 whitespace-nowrap">
+                                ₹{(rate * qty).toFixed(2)}
+                              </td>
+                              <td className="px-4 py-3 text-center whitespace-nowrap">
+                                <div className="flex items-center justify-center">
+                                  {currentStatus === "Pending" ? (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        if (!item.order_id) return;
+                                        const userConfirmed = window.confirm("Confirm this buyer order and notify their tracking portal?");
+                                        if (!userConfirmed) return;
 
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5">
-                            <span className="text-[10px] text-stone-400 font-bold">
-                              Order ID: <span className="text-stone-700 font-mono font-bold">#{item.order_id?.substring(0,8) || "N/A"}</span>
-                            </span>
-                            
-                            <div className="flex items-center gap-2">
-                              {currentStatus === "Pending" ? (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    if (!item.order_id) return;
-                                    const userConfirmed = window.confirm("Are you sure you want to confirm this buyer order and notify their tracking portal?");
-                                    if (!userConfirmed) return;
-
-                                    const { error } = await supabase
-                                      .from("orders")
-                                      .update({ status: "Confirmed" })
-                                      .eq("id", item.order_id);
-                                      
-                                    if (error) {
-                                      alert(`Confirmation Error: ${error.message}`);
-                                    } else {
-                                      alert("Order Confirmed! Tracking timeline updated.");
-                                      fetchLiveEarningsStream();
-                                    }
-                                  }}
-                                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-black rounded-lg transition-all flex items-center gap-1 shadow-xs cursor-pointer tracking-wide uppercase"
-                                >
-                                  <CheckCircle2 size={12} /> Confirm Order
-                                </button>
-                              ) : (
-                                <>
-                                  <label className="text-[10px] font-bold text-stone-400 uppercase">Status Flow:</label>
-                                  <select 
-                                    value={currentStatus}
-                                    onChange={async (e) => {
-                                      const newStatus = e.target.value;
-                                      if (!item.order_id) return;
-                                      
-                                      const { error } = await supabase
-                                        .from("orders")
-                                        .update({ status: newStatus })
-                                        .eq("id", item.order_id);
+                                        const { error } = await supabase
+                                          .from("orders")
+                                          .update({ status: "Confirmed" })
+                                          .eq("id", item.order_id);
+                                          
+                                        if (error) {
+                                          alert(`Confirmation Error: ${error.message}`);
+                                        } else {
+                                          fetchLiveEarningsStream();
+                                        }
+                                      }}
+                                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer tracking-wider uppercase"
+                                    >
+                                      <CheckCircle2 size={11} /> Confirm
+                                    </button>
+                                  ) : (
+                                    <select 
+                                      value={currentStatus}
+                                      onChange={async (e) => {
+                                        const newStatus = e.target.value;
+                                        if (!item.order_id) return;
                                         
-                                      if (error) {
-                                        alert(`Transition Error: ${error.message}`);
-                                      } else {
-                                        fetchLiveEarningsStream();
-                                      }
-                                    }}
-                                    className="border border-stone-200 bg-stone-50 text-[11px] font-bold px-2 py-1 rounded-md outline-none text-stone-700 cursor-pointer focus:border-emerald-700"
-                                  >
-                                    <option value="Confirmed">Confirmed</option>
-                                    <option value="Processing">Processing</option>
-                                    <option value="Shipped">Shipped</option>
-                                    <option value="Delivered">Delivered</option>
-                                  </select>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                                        const { error } = await supabase
+                                          .from("orders")
+                                          .update({ status: newStatus })
+                                          .eq("id", item.order_id);
+                                          
+                                        if (error) {
+                                          alert(`Transition Error: ${error.message}`);
+                                        } else {
+                                          fetchLiveEarningsStream();
+                                        }
+                                      }}
+                                      className="border border-stone-200 bg-stone-50 text-[10px] font-bold px-2 py-1 rounded-md outline-none text-stone-700 cursor-pointer focus:border-emerald-700"
+                                    >
+                                      <option value="Confirmed">Confirmed</option>
+                                      <option value="Processing">Processing</option>
+                                      <option value="Shipped">Shipped</option>
+                                      <option value="Delivered">Delivered</option>
+                                    </select>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
             </div>
           </div>
         )}
-
       </main>
     </div>
   );
