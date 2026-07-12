@@ -16,7 +16,7 @@ export default function FarmerPortalPage() {
   const [earningsLedger, setEarningsLedger] = useState<any[]>([]);
   const [farmerName, setFarmerName] = useState<string>("Local Farmer Estate");
   
-  // Split loading states to prevent dashboard-wide lockups
+  // Separate individual loaders to completely prevent global app-lockups
   const [inventoryLoading, setInventoryLoading] = useState(true);
   const [ledgerLoading, setLedgerLoading] = useState(true);
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -36,18 +36,27 @@ export default function FarmerPortalPage() {
   useEffect(() => {
     async function initPortalData() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
-          setFarmerName(name);
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          console.warn("No active authenticated session found by Supabase.");
+          setInventoryLoading(false);
+          setLedgerLoading(false);
+          return;
         }
-        // Safely fire both data streams concurrently
+
+        const name = user.user_metadata?.full_name || user.email?.split("@")[0] || "Local Farmer Estate";
+        setFarmerName(name);
+
+        // Inject the fetched user credentials cleanly into parallel data queries
         await Promise.all([
-          fetchFarmerInventory(),
-          fetchLiveEarningsStream()
+          fetchFarmerInventory(user.id),
+          fetchLiveEarningsStream(user)
         ]);
       } catch (err) {
-        console.error("Portal initialization failure:", err);
+        console.error("Portal core initialization crashed:", err);
+      } finally {
+        // Ultimate safety valve: drops loaders even if queries fail completely
         setInventoryLoading(false);
         setLedgerLoading(false);
       }
@@ -65,9 +74,10 @@ export default function FarmerPortalPage() {
           schema: "public",
           table: "order_items",
         },
-        () => {
+        async () => {
           console.log("🔄 Real-time update detected in order items! Syncing ledger...");
-          fetchLiveEarningsStream();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) fetchLiveEarningsStream(user);
         }
       )
       .subscribe();
@@ -77,33 +87,29 @@ export default function FarmerPortalPage() {
     };
   }, []);
 
-  async function fetchFarmerInventory() {
+  async function fetchFarmerInventory(userId: string) {
     setInventoryLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       if (!error && data) {
         setMyInventory(data);
+      } else if (error) {
+        console.error("Supabase Inventory Database Error:", error.message);
       }
     } catch (err) {
-      console.error("Inventory track fault:", err);
+      console.error("Inventory network fault:", err);
     } finally {
       setInventoryLoading(false);
     }
   }
 
-  async function fetchLiveEarningsStream() {
+  async function fetchLiveEarningsStream(user: any) {
     setLedgerLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
       const profileUsername = user.user_metadata?.full_name || user.email?.split("@")[0] || "abhijeetrajrana0705";
       const commercialFarmName = "Rana Agricultural Farms";
 
@@ -112,6 +118,10 @@ export default function FarmerPortalPage() {
         supabase.from("products").select("*").eq("user_id", user.id),
         supabase.from("orders").select("*")
       ]);
+
+      if (orderItemsRes.error) console.error("Order items query error:", orderItemsRes.error.message);
+      if (productsRes.error) console.error("Products query error:", productsRes.error.message);
+      if (ordersRes.error) console.error("Orders query error:", ordersRes.error.message);
 
       const orderItems = orderItemsRes.data || [];
       const userProducts = productsRes.data || [];
@@ -167,7 +177,8 @@ export default function FarmerPortalPage() {
 
       if (!error) {
         alert("Crop removed successfully from the storefront.");
-        fetchFarmerInventory();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) fetchFarmerInventory(user.id);
       }
     } catch (err) {
       console.error("Deletion error:", err);
@@ -274,7 +285,7 @@ export default function FarmerPortalPage() {
         setCropQty("");
         setSelectedFile(null);
         setPreviewUrl("");
-        fetchFarmerInventory();
+        fetchFarmerInventory(user.id);
       } else {
         alert(`Database Error: ${error.message}`);
       }
@@ -540,7 +551,8 @@ export default function FarmerPortalPage() {
                                         if (error) {
                                           alert(`Confirmation Error: ${error.message}`);
                                         } else {
-                                          fetchLiveEarningsStream();
+                                          const { data: { user } } = await supabase.auth.getUser();
+                                          if (user) fetchLiveEarningsStream(user);
                                         }
                                       }}
                                       className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black rounded-lg transition-all flex items-center gap-1 cursor-pointer tracking-wider uppercase"
@@ -562,7 +574,8 @@ export default function FarmerPortalPage() {
                                         if (error) {
                                           alert(`Transition Error: ${error.message}`);
                                         } else {
-                                          fetchLiveEarningsStream();
+                                          const { data: { user } } = await supabase.auth.getUser();
+                                          if (user) fetchLiveEarningsStream(user);
                                         }
                                       }}
                                       className="border border-stone-200 bg-stone-50 text-[10px] font-bold px-2 py-1 rounded-md outline-none text-stone-700 cursor-pointer focus:border-emerald-700"

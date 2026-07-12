@@ -1,4 +1,3 @@
-// app/track-orders/page.tsx
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
@@ -14,13 +13,18 @@ function TrackingInterface() {
   const [ordersList, setOrdersList] = useState<any[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [userId, setUserId] = useState<string | null>(null);
 
+  // 1. Initial Data Fetch Pipeline
   useEffect(() => {
     async function fetchOrderStream() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (user?.email) {
-          setUserEmail(user.email.split("@")[0] || user.email);
+        if (user) {
+          setUserId(user.id);
+          if (user.email) {
+            setUserEmail(user.email.split("@")[0] || user.email);
+          }
         }
 
         if (!user) {
@@ -28,7 +32,6 @@ function TrackingInterface() {
           return;
         }
 
-        // 1. Fetch entire historical log matching the buyer account
         const { data: allOrders, error } = await supabase
           .from("orders")
           .select("id, total_amount, status, created_at")
@@ -40,7 +43,6 @@ function TrackingInterface() {
         if (allOrders && allOrders.length > 0) {
           setOrdersList(allOrders);
 
-          // 2. Prioritize URL query parameters first, fallback to newest order entry
           const explicitParamId = searchParams.get("orderId");
           const matchedOrder = explicitParamId 
             ? allOrders.find(o => o.id === explicitParamId) 
@@ -57,6 +59,46 @@ function TrackingInterface() {
 
     fetchOrderStream();
   }, [searchParams, supabase]);
+
+  // 2. Realtime Synchronizer (Listens to status mutations straight from Farmer Portal)
+  useEffect(() => {
+    if (!userId) return;
+
+    const trackingSubscription = supabase
+      .channel(`live-user-tracking-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log("🔄 Real-time tracking mutation intercepted:", payload.new);
+          
+          // Instantly update the comprehensive historical log array
+          setOrdersList((currentList) =>
+            currentList.map((order) =>
+              order.id === payload.new.id ? { ...order, status: payload.new.status } : order
+            )
+          );
+
+          // Instantly update the actively selected open tracking card view metrics
+          setSelectedOrder((currentSelected: any) => {
+            if (currentSelected && currentSelected.id === payload.new.id) {
+              return { ...currentSelected, status: payload.new.status };
+            }
+            return currentSelected;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(trackingSubscription);
+    };
+  }, [userId, supabase]);
 
   // Handle step mapping for currently highlighted record context state
   const dbStatus = selectedOrder?.status || "Pending";
@@ -214,14 +256,14 @@ function TrackingInterface() {
                           </div>
                           <p className="mt-1 text-xs text-gray-500 font-medium leading-relaxed">
                             {step.desc}
-                      </p>
-                    </div>
+                          </p>
+                        </div>
 
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
           </div>
