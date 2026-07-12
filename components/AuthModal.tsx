@@ -30,14 +30,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     try {
       if (isSignUp) {
-        // Standard Sign-Up (Triggers the default confirmation email link)
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
-        });
+        // Inside your registration submit handler function:
+const { data, error } = await supabase.auth.signUp({
+  email: email, // your email state variable
+  password: password, // your password state variable
+  options: {
+    // Dynamically grabs http://localhost:3000 or https://greenfield-five.vercel.app
+    emailRedirectTo: `${window.location.origin}/auth/callback`,
+  },
+});
         if (error) throw error;
 
         setSuccessMsg("Registration initiated! Please check your email inbox to confirm your account.");

@@ -85,7 +85,7 @@ export default function CheckoutPage() {
         quantity: item.quantity,
         price: item.price,
         // Passes the specific farmer value (e.g. "abhijeetrairana0705") down per item
-        farmer_name: item.farmer_name || "Local Farmer Estate" 
+        farmer_name: item.farmerName || "Local Farmer Estate" 
       }));
 
       // Insert all mapped items for this order
@@ -230,12 +230,12 @@ export default function CheckoutPage() {
                 </div>
                 {isBulkDiscountEligible && (
                   <div className="flex items-center justify-between text-xs font-medium text-emerald-600 bg-emerald-50/50 px-2 py-1.5 rounded-lg">
-                    <span>Wholesale Volume Discount (10%):</span>
+                    <span>Wholesale Volume Discount (5%):</span>
                     <span className="font-extrabold">-₹{discount.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-xs font-medium text-amber-600 bg-amber-50/40 px-2 py-1.5 rounded-lg">
-                  <span className="flex items-center gap-1"><Percent size={12} /> Platform Operations Fee (2%):</span>
+                  <span className="flex items-center gap-1"><Percent size={12} /> Platform Operations Fee (4%):</span>
                   <span className="font-extrabold">₹{platformFee.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs font-medium text-gray-500">
