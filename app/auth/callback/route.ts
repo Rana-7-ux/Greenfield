@@ -1,10 +1,10 @@
+// app/auth/callback/route.ts
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // Check if a next redirect parameter was supplied, otherwise default back home
   const next = searchParams.get("next") ?? "/";
 
   if (code) {
@@ -18,22 +18,29 @@ export async function GET(request: Request) {
               .find(row => row.startsWith(`${name}=`))?.split("=")[1];
           },
           set(name: string, value: string, options: CookieOptions) {
-            // Handled securely by middleware mapping configurations
+            // Managed by global middleware configurations safely
           },
           remove(name: string, options: CookieOptions) {
-            // Handled securely by middleware mapping configurations
+            // Managed by global middleware configurations safely
           },
         },
       }
     );
 
-    // Cryptographically trade the email link token code for an active verified browser session
+    // Trade the email token code for an active verified session
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+    
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      // SENIOR ENGINEER FIX: Append a verified state flag to the URL.
+      // This breaks client-side routing cache locks and forces the browser to instantly
+      // read the fresh cookies we just dropped in without displaying the sign-in modal again.
+      const targetUrl = new URL(next, origin);
+      targetUrl.searchParams.set("verified", "true");
+      
+      return NextResponse.redirect(targetUrl.toString());
     }
   }
 
-  // If anything fails, route them safely to the home page to attempt signing in again
+  // Fallback safe recovery exit
   return NextResponse.redirect(`${origin}/`);
 }

@@ -23,17 +23,25 @@ export default function Navbar() {
   useEffect(() => {
     async function getActiveSession() {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+
+      // Closely check if the landing parameter includes the redirect success token
+      if (currentUser && typeof window !== "undefined" && window.location.search.includes("verified=true")) {
+        setIsAuthModalOpen(false);
+      }
     }
 
     getActiveSession();
 
     // Setup listener to catch login/logout updates smoothly
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
       
-      // SENIOR ENGINEER FIX: Force layout reconciliation the absolute millisecond an identity event is confirmed
+      // Force layout reconciliation the absolute millisecond an identity event is confirmed
       if (event === "SIGNED_IN") {
+        setIsAuthModalOpen(false);
         router.refresh();
       }
     });
