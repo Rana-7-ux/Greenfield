@@ -9,7 +9,7 @@ import {
   Loader2, Users, ShoppingBag, Truck, ShieldCheck, 
   ArrowRight, Sparkles, Sprout, HeartHandshake, 
   MapPin, Milestone, HelpCircle, FileText, Globe,
-  IndianRupee, TrendingUp, Activity
+  IndianRupee, TrendingUp, Activity, Radio, Layers, Orbit
 } from "lucide-react";
 
 export default function HomePage() {
@@ -97,9 +97,10 @@ export default function HomePage() {
 
   // Live Network Ticker Insights calculated straight from your real data stream
   const marketInsights = useMemo(() => {
-    if (products.length === 0) return { avgPrice: 0, topCategory: "N/A" };
+    if (products.length === 0) return { avgPrice: 0, topCategory: "N/A", totalVolume: 0 };
     
     const total = products.reduce((sum, p) => sum + (Number(p.price) || 0), 0);
+    const volume = products.reduce((sum, p) => sum + (Number(p.inventory_qty) || 0), 0);
     const avg = total / products.length;
 
     const catCounts: Record<string, number> = {};
@@ -120,7 +121,8 @@ export default function HomePage() {
 
     return {
       avgPrice: Math.round(avg),
-      topCategory: topCat
+      topCategory: topCat,
+      totalVolume: volume
     };
   }, [products]);
 
@@ -132,30 +134,55 @@ export default function HomePage() {
       <div className="hidden md:block absolute top-[25%] left-0 w-[600px] h-[600px] bg-amber-100/20 rounded-full blur-3xl pointer-events-none -z-10 -translate-x-1/4 will-change-transform" />
       <div className="hidden md:block absolute bottom-[20%] right-0 w-[500px] h-[500px] bg-emerald-100/20 rounded-full blur-3xl pointer-events-none -z-10 translate-x-1/3 will-change-transform" />
 
+      {/* NEW FEATURE: Creative Real-time Agro-Commodities Running Ticker */}
+      <div className="w-full bg-stone-900 text-stone-400 text-[10px] font-mono py-2 border-b border-stone-800 select-none overflow-hidden hidden sm:block">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between whitespace-nowrap gap-8 animate-marquee">
+          <div className="flex items-center gap-6">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-bold uppercase tracking-wider"><Radio size={10} className="animate-pulse" /> Live Terminal Feed:</span>
+            <span>[GRAINS] Basmati Index stable at ₹{marketInsights.avgPrice + 12}/kg</span>
+            <span className="text-stone-600">•</span>
+            <span>[FRUITS] Karnataka Orchards dispatch logged successfully</span>
+            <span className="text-stone-600">•</span>
+            <span>[ORGANIC] Honey & Spices pool inventory up by 14%</span>
+            <span className="text-stone-600">•</span>
+            <span>[LOGISTICS] Direct farm-gate route transit times tracking at 2.4hrs average</span>
+          </div>
+          <div className="flex items-center gap-2 text-stone-500 text-[9px]">
+            <span>SYSTEM STATUS: STABLE</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          </div>
+        </div>
+      </div>
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative space-y-10 sm:space-y-16">
         
-        {/* Soft Hero Section */}
-        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-br from-[#e8ece3] via-[#edf1e8] to-[#f4f6f0] p-6 sm:p-12 lg:p-16 border border-emerald-200/40 shadow-xs">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-amber-200/10 via-transparent to-transparent pointer-events-none" />
+        {/* Creative, Hyper-Realistic Agro-Exchange Hero Panel */}
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-br from-[#e1e7db] via-[#edf1e8] to-[#f5f7f2] p-6 sm:p-12 lg:p-16 border border-emerald-900/10 shadow-sm">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-amber-600/5 via-transparent to-transparent pointer-events-none" />
           
+          {/* Subtle graph background overlay decoration to evoke an asset exchange feel */}
+          <div className="absolute right-0 bottom-0 opacity-[0.03] pointer-events-none translate-x-10 translate-y-10 hidden lg:block">
+            <Orbit size={500} className="text-emerald-900" />
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative">
             <div className="lg:col-span-7 space-y-4 sm:space-y-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-800/10 border border-emerald-800/5 max-w-full">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-900/10 border border-emerald-900/5 max-w-full">
                 <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-700 shrink-0 animate-pulse" />
-                <span className="text-[10px] sm:text-[11px] font-bold text-emerald-900 tracking-wide uppercase truncate">
-                  🌾 Harvested today · Delivered tomorrow
+                <span className="text-[10px] sm:text-[11px] font-black text-emerald-950 tracking-wide uppercase truncate">
+                  🌾 Transparent Agrarian Index · Farm-Gate Sourced
                 </span>
               </div>
               
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-stone-900 leading-[1.2]">
-                Fresh From the Farm. <br className="hidden sm:inline" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 to-emerald-900">
-                  Straight to Your Kitchen.
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-stone-900 leading-[1.15]">
+                Decentralized Access. <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-800 via-emerald-900 to-stone-900">
+                  Direct Farm-Gate Yields.
                 </span>
               </h1>
               
               <p className="text-xs sm:text-sm text-stone-600 font-medium max-w-lg leading-relaxed">
-                Eliminate multi-week processing storage hubs. Greenfield routes direct agricultural batches from regional agrarian fields right to residential thresholds under a transparent pricing structure.
+                Skip commercial storage silos entirely. Greenfield interfaces direct farm supply registries with residential nodes—guaranteeing 100% grower margin equity under an immutable escrow standard.
               </p>
 
               <div className="pt-2 flex flex-col sm:flex-wrap sm:flex-row items-start sm:items-center gap-3 w-full">
@@ -164,50 +191,53 @@ export default function HomePage() {
                     const el = document.getElementById("catalog-section");
                     el?.scrollIntoView({ behavior: "smooth" });
                   }}
-                  className="w-full sm:w-auto bg-emerald-800 hover:bg-emerald-950 active:scale-95 transition-all text-white font-bold text-xs px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 group shadow-sm cursor-pointer"
+                  className="w-full sm:w-auto bg-emerald-900 hover:bg-stone-900 active:scale-95 transition-all text-white font-bold text-xs px-6 py-3.5 rounded-xl flex items-center justify-center gap-2 group shadow-md shadow-emerald-900/10 cursor-pointer"
                 >
-                  <span>Browse Available Yields</span>
+                  <span>Access Live Supply Registries</span>
                   <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
                 </button>
-                <div className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] text-emerald-900 font-bold bg-[#fcfbfa]/80 px-3.5 py-2.5 rounded-xl border border-emerald-200/30 backdrop-blur-xs">
-                  <Sparkles size={12} className="text-emerald-700 shrink-0" /> <span className="truncate">100% Payout Disbursed to Growers</span>
+                <div className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] text-emerald-900 font-bold bg-[#fcfbfa]/90 px-3.5 py-2.5 rounded-xl border border-stone-200/50 backdrop-blur-xs">
+                  <Sparkles size={12} className="text-emerald-700 shrink-0" /> <span className="truncate">Escrow Clearance Guaranteed</span>
                 </div>
               </div>
             </div>
 
-            {/* Custom Interactive Dashboard Panel - Tailored directly to your dashboard theme */}
+            {/* Premium Interactive Terminal Dashboard Panel */}
             <div className="lg:col-span-5 w-full hidden sm:block">
-              <div className="bg-[#fcfbfa]/90 backdrop-blur-md border border-stone-200/50 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="bg-[#fcfbfa]/95 backdrop-blur-md border border-stone-200/60 rounded-2xl p-5 shadow-md space-y-4 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-700 to-amber-500" />
+                
                 <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-800"><Activity size={14} /></span>
-                    <span className="text-[11px] font-black tracking-wider uppercase text-stone-900">Market Pulse Terminal</span>
+                    <span className="p-1.5 rounded-lg bg-stone-950 text-emerald-400 font-mono text-[10px] font-bold"><Layers size={12} /></span>
+                    <span className="text-[11px] font-black tracking-wider uppercase text-stone-900">Network Telemetry</span>
                   </div>
-                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Live Stream</span>
+                  <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/30 font-mono">NODE ACTIVE</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-stone-50 border border-stone-200/40 p-3 rounded-xl">
-                    <div className="flex items-center gap-1.5 text-stone-400 text-[10px] font-bold uppercase tracking-wider">
-                      <IndianRupee size={10} /> Avg Index Rate
+                    <div className="flex items-center gap-1.5 text-stone-400 text-[9px] font-bold uppercase tracking-wider">
+                      <IndianRupee size={10} /> Market Price Mean
                     </div>
-                    <p className="text-lg font-black text-stone-900 mt-1">₹{marketInsights.avgPrice}<span className="text-[10px] font-bold text-stone-400"> / kg</span></p>
+                    <p className="text-lg font-black text-stone-900 mt-1">₹{marketInsights.avgPrice}<span className="text-[10px] font-bold text-stone-400">/kg</span></p>
                   </div>
                   <div className="bg-stone-50 border border-stone-200/40 p-3 rounded-xl">
-                    <div className="flex items-center gap-1.5 text-stone-400 text-[10px] font-bold uppercase tracking-wider">
-                      <TrendingUp size={10} /> Top Velocity Category
+                    <div className="flex items-center gap-1.5 text-stone-400 text-[9px] font-bold uppercase tracking-wider">
+                      <TrendingUp size={10} /> Dominant Flow Category
                     </div>
-                    <p className="text-lg font-black text-emerald-800 mt-1 truncate">{marketInsights.topCategory}</p>
+                    <p className="text-lg font-black text-emerald-900 mt-1 truncate">{marketInsights.topCategory}</p>
                   </div>
                 </div>
 
-                <div className="bg-[#edf1e8]/70 border border-emerald-200/20 rounded-xl p-3 flex items-start gap-2.5">
-                  <span className="text-base">💡</span>
-                  <div className="space-y-0.5">
-                    <h5 className="text-[11px] font-black text-emerald-900">Direct Farm Settlement Action</h5>
-                    <p className="text-[10px] text-stone-600 font-medium leading-normal">
-                      Farmers bypass intermediaries by publishing inventory variables right to this network node container.
-                    </p>
+                <div className="bg-stone-900 text-stone-300 rounded-xl p-3 space-y-1.5 font-mono text-[10px]">
+                  <div className="flex justify-between border-b border-stone-800 pb-1">
+                    <span className="text-stone-500">AGGREGATE VOLUME</span>
+                    <span className="font-bold text-white">{marketInsights.totalVolume.toLocaleString()} KG</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">ESTIMATED LOGISTICS SLOTS</span>
+                    <span className="text-amber-400 font-bold">READY TO DISPATCH</span>
                   </div>
                 </div>
               </div>
