@@ -334,9 +334,9 @@ export default function FarmerPortalPage() {
         </div>
 
         {activeTab === "inventory" ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Left Column: Form */}
-            <form onSubmit={handleUploadCrop} className="lg:col-span-5 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-6 shadow-xs space-y-5">
+            <form onSubmit={handleUploadCrop} className="lg:col-span-5 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-6 shadow-xs space-y-5 h-auto self-start">
               <div className="space-y-1">
                 <h3 className="text-sm font-black text-stone-900 flex items-center gap-1.5">
                   <Sprout size={16} className="text-emerald-800" /> Catalog Registry Parameters
@@ -403,7 +403,7 @@ export default function FarmerPortalPage() {
             </form>
 
             {/* Right Column: Listings */}
-            <div className="lg:col-span-7 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-5 shadow-xs flex flex-col">
+            <div className="lg:col-span-7 bg-[#fcfbfa] border border-stone-200/30 rounded-2xl p-5 shadow-xs flex flex-col h-auto max-h-[720px]">
               <h3 className="text-xs font-black uppercase text-stone-400 tracking-wider mb-4">Your Live Marketplace Listings</h3>
               
               {inventoryLoading ? (
@@ -415,11 +415,12 @@ export default function FarmerPortalPage() {
                   <p className="text-[11px] text-stone-400 max-w-xs mt-1 leading-relaxed">Use the registry panel to list items live on the store network.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto max-h-[500px] pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto pr-1 custom-scrollbar">
                   {myInventory.map((item) => (
-                    <div key={item.id} className="bg-white border border-stone-200/60 rounded-xl overflow-hidden shadow-xs relative group flex flex-col justify-between">
+                    <div key={item.id} className="bg-white border border-stone-200/60 rounded-xl overflow-hidden shadow-xs flex flex-col justify-between min-h-[250px]">
                       <div>
-                        <div className="h-32 bg-stone-100 relative">
+                        {/* Explicit height constraint applied to image block to stop layout crushing */}
+                        <div className="h-36 w-full bg-stone-100 relative shrink-0">
                           <img src={item.image_url || item.image || "/placeholder.jpg"} className="w-full h-full object-cover" alt={item.title} />
                           <span className="absolute top-2 left-2 bg-stone-900/80 text-white font-bold text-[9px] px-2 py-0.5 rounded-full backdrop-blur-xs">
                             {item.category || "Unmapped"}
@@ -433,8 +434,8 @@ export default function FarmerPortalPage() {
                           </div>
                         </div>
                       </div>
-                      <div className="p-2 pt-0">
-                        <button type="button" onClick={() => handleDeleteCrop(item.id)} className="w-full py-1.5 bg-red-50 text-red-700 hover:bg-red-100 font-bold text-[11px] rounded-lg transition-colors flex items-center justify-center gap-1">
+                      <div className="p-3 pt-0 mt-auto">
+                        <button type="button" onClick={() => handleDeleteCrop(item.id)} className="w-full py-2 bg-red-50 text-red-700 hover:bg-red-100 font-bold text-[11px] rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer">
                           <Trash2 size={12} /> Remove Yield
                         </button>
                       </div>

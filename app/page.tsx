@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
@@ -9,7 +8,8 @@ import type { Product } from "../types";
 import {
   Loader2, Users, ShoppingBag, Truck, ShieldCheck, 
   ArrowRight, Sparkles, Sprout, HeartHandshake, 
-  MapPin, Milestone, HelpCircle, FileText, Globe 
+  MapPin, Milestone, HelpCircle, FileText, Globe,
+  IndianRupee, TrendingUp, Activity
 } from "lucide-react";
 
 export default function HomePage() {
@@ -95,6 +95,35 @@ export default function HomePage() {
     });
   }, [products, selectedCategory]);
 
+  // Live Network Ticker Insights calculated straight from your real data stream
+  const marketInsights = useMemo(() => {
+    if (products.length === 0) return { avgPrice: 0, topCategory: "N/A" };
+    
+    const total = products.reduce((sum, p) => sum + (Number(p.price) || 0), 0);
+    const avg = total / products.length;
+
+    const catCounts: Record<string, number> = {};
+    products.forEach(p => {
+      if (p.category) {
+        catCounts[p.category] = (catCounts[p.category] || 0) + 1;
+      }
+    });
+
+    let topCat = "Vegetables";
+    let maxCount = 0;
+    Object.entries(catCounts).forEach(([cat, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topCat = cat;
+      }
+    });
+
+    return {
+      avgPrice: Math.round(avg),
+      topCategory: topCat
+    };
+  }, [products]);
+
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-stone-800 w-full relative overflow-x-hidden antialiased selection:bg-emerald-100 selection:text-emerald-900">
       
@@ -109,40 +138,81 @@ export default function HomePage() {
         <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-br from-[#e8ece3] via-[#edf1e8] to-[#f4f6f0] p-6 sm:p-12 lg:p-16 border border-emerald-200/40 shadow-xs">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-amber-200/10 via-transparent to-transparent pointer-events-none" />
           
-          <div className="relative max-w-2xl space-y-4 sm:space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-800/10 border border-emerald-800/5 max-w-full">
-              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-700 shrink-0 animate-pulse" />
-              <span className="text-[10px] sm:text-[11px] font-bold text-emerald-900 tracking-wide uppercase truncate">
-                🌾 Harvested today · Delivered tomorrow
-              </span>
-            </div>
-            
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-stone-900 leading-[1.2]">
-              Fresh From the Farm. <br className="hidden sm:inline" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 to-emerald-900">
-                Straight to Your Kitchen.
-              </span>
-            </h1>
-            
-            <p className="text-xs sm:text-sm text-stone-600 font-medium max-w-lg leading-relaxed">
-              Eliminate multi-week processing storage hubs. Greenfield routes direct agricultural batches from regional agrarian fields right to residential thresholds under a transparent pricing structure.
-            </p>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative">
+            <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-800/10 border border-emerald-800/5 max-w-full">
+                <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-700 shrink-0 animate-pulse" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-emerald-900 tracking-wide uppercase truncate">
+                  🌾 Harvested today · Delivered tomorrow
+                </span>
+              </div>
+              
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-stone-900 leading-[1.2]">
+                Fresh From the Farm. <br className="hidden sm:inline" />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 to-emerald-900">
+                  Straight to Your Kitchen.
+                </span>
+              </h1>
+              
+              <p className="text-xs sm:text-sm text-stone-600 font-medium max-w-lg leading-relaxed">
+                Eliminate multi-week processing storage hubs. Greenfield routes direct agricultural batches from regional agrarian fields right to residential thresholds under a transparent pricing structure.
+              </p>
 
-            <div className="pt-2 flex flex-col sm:flex-wrap sm:flex-row items-start sm:items-center gap-3 w-full">
-              <button 
-                onClick={() => {
-                  const el = document.getElementById("catalog-section");
-                  el?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="w-full sm:w-auto bg-emerald-800 hover:bg-emerald-950 active:scale-95 transition-all text-white font-bold text-xs px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 group shadow-sm"
-              >
-                <span>Browse Available Yields</span>
-                <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-              </button>
-              <div className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] text-emerald-900 font-bold bg-[#fcfbfa]/80 px-3.5 py-2.5 rounded-xl border border-emerald-200/30 backdrop-blur-xs">
-                <Sparkles size={12} className="text-emerald-700 shrink-0" /> <span className="truncate">100% Payout Disbursed to Growers</span>
+              <div className="pt-2 flex flex-col sm:flex-wrap sm:flex-row items-start sm:items-center gap-3 w-full">
+                <button 
+                  onClick={() => {
+                    const el = document.getElementById("catalog-section");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="w-full sm:w-auto bg-emerald-800 hover:bg-emerald-950 active:scale-95 transition-all text-white font-bold text-xs px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 group shadow-sm cursor-pointer"
+                >
+                  <span>Browse Available Yields</span>
+                  <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                </button>
+                <div className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-[10px] sm:text-[11px] text-emerald-900 font-bold bg-[#fcfbfa]/80 px-3.5 py-2.5 rounded-xl border border-emerald-200/30 backdrop-blur-xs">
+                  <Sparkles size={12} className="text-emerald-700 shrink-0" /> <span className="truncate">100% Payout Disbursed to Growers</span>
+                </div>
               </div>
             </div>
+
+            {/* Custom Interactive Dashboard Panel - Tailored directly to your dashboard theme */}
+            <div className="lg:col-span-5 w-full hidden sm:block">
+              <div className="bg-[#fcfbfa]/90 backdrop-blur-md border border-stone-200/50 rounded-2xl p-5 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-emerald-50 text-emerald-800"><Activity size={14} /></span>
+                    <span className="text-[11px] font-black tracking-wider uppercase text-stone-900">Market Pulse Terminal</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse">Live Stream</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-stone-50 border border-stone-200/40 p-3 rounded-xl">
+                    <div className="flex items-center gap-1.5 text-stone-400 text-[10px] font-bold uppercase tracking-wider">
+                      <IndianRupee size={10} /> Avg Index Rate
+                    </div>
+                    <p className="text-lg font-black text-stone-900 mt-1">₹{marketInsights.avgPrice}<span className="text-[10px] font-bold text-stone-400"> / kg</span></p>
+                  </div>
+                  <div className="bg-stone-50 border border-stone-200/40 p-3 rounded-xl">
+                    <div className="flex items-center gap-1.5 text-stone-400 text-[10px] font-bold uppercase tracking-wider">
+                      <TrendingUp size={10} /> Top Velocity Category
+                    </div>
+                    <p className="text-lg font-black text-emerald-800 mt-1 truncate">{marketInsights.topCategory}</p>
+                  </div>
+                </div>
+
+                <div className="bg-[#edf1e8]/70 border border-emerald-200/20 rounded-xl p-3 flex items-start gap-2.5">
+                  <span className="text-base">💡</span>
+                  <div className="space-y-0.5">
+                    <h5 className="text-[11px] font-black text-emerald-900">Direct Farm Settlement Action</h5>
+                    <p className="text-[10px] text-stone-600 font-medium leading-normal">
+                      Farmers bypass intermediaries by publishing inventory variables right to this network node container.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -190,8 +260,9 @@ export default function HomePage() {
               return (
                 <button
                   key={cat}
+                  type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`text-[11px] sm:text-xs font-bold px-4 py-2 rounded-xl border transition-all shrink-0 active:scale-95 flex items-center gap-1.5 ${
+                  className={`text-[11px] sm:text-xs font-bold px-4 py-2 rounded-xl border transition-all shrink-0 active:scale-95 flex items-center gap-1.5 cursor-pointer ${
                     isActive
                       ? "bg-emerald-800 text-white border-emerald-800 shadow-xs"
                       : "bg-stone-50 text-stone-600 border-stone-200/60 hover:bg-stone-100/60"
