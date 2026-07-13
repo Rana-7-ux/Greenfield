@@ -7,7 +7,14 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/";
 
+  // If a valid code is present, exchange it for an active session
   if (code) {
+    // 1. Prepare the redirect response object first
+    const targetUrl = new URL(next, origin);
+    targetUrl.searchParams.set("verified", "true");
+    const response = NextResponse.redirect(targetUrl.toString());
+
+    // 2. Initialize Supabase SSR and map cookie handlers directly to the response object
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -17,30 +24,27 @@ export async function GET(request: Request) {
             return request.headers.get("cookie")?.split("; ")
               .find(row => row.startsWith(`${name}=`))?.split("=")[1];
           },
+          // FIXED: Write cookies directly onto the outgoing response so the browser saves them
           set(name: string, value: string, options: CookieOptions) {
-            // Managed by global middleware configurations safely
+            response.cookies.set({ name, value, ...options });
           },
+          // FIXED: Allow token destruction on the response if verification fails
           remove(name: string, options: CookieOptions) {
-            // Managed by global middleware configurations safely
+            response.cookies.delete({ name, ...options });
           },
         },
       }
     );
 
-    // Trade the email token code for an active verified session
+    // 3. Cryptographically trade the verification code for active session tokens
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (!error) {
-      // SENIOR ENGINEER FIX: Append a verified state flag to the URL.
-      // This breaks client-side routing cache locks and forces the browser to instantly
-      // read the fresh cookies we just dropped in without displaying the sign-in modal again.
-      const targetUrl = new URL(next, origin);
-      targetUrl.searchParams.set("verified", "true");
-      
-      return NextResponse.redirect(targetUrl.toString());
+      // Return the response object containing the brand-new session cookies!
+      return response;
     }
   }
 
-  // Fallback safe recovery exit
-  return NextResponse.redirect(`${origin}/`);
+  // Fallback safe escape hatch if the token was invalid or expired
+  return NextResponse.redirect(`${origin}/?error=verification_failed`);
 }
