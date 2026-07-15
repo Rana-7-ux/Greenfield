@@ -1,13 +1,13 @@
 // components/Navbar.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
 import { createClient } from "../lib/supabase";
 import AuthModal from "./AuthModal";
-import { ShoppingCart, Leaf, Search, User, LogOut } from "lucide-react";
+import { ShoppingCart, Leaf, Search, User, LogOut, X } from "lucide-react";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 export default function Navbar() {
@@ -15,6 +15,8 @@ export default function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
  
   const supabase = createClient();
   const totalItemsCount = cart.reduce((acc: number, item) => acc + item.quantity, 0);
@@ -49,6 +51,30 @@ export default function Navbar() {
     return () => subscription.unsubscribe();
   }, [supabase, router]);
 
+  // Handle programmatically pulling focus to input when opening mobile search view
+  useEffect(() => {
+    if (isMobileSearchOpen) {
+      // Small timeout gives mobile viewports enough calculation time to render before invoking keyboard focus hook
+      const timer = setTimeout(() => {
+        mobileInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isMobileSearchOpen]);
+
+  // Unified logic for processing input query events
+  const handleSearchChange = (query: string) => {
+    if (window.location.pathname !== "/search") {
+      window.location.href = `/search?q=${encodeURIComponent(query)}`;
+    } else {
+      const url = new URL(window.location.href);
+      if (query) url.searchParams.set("q", query);
+      else url.searchParams.delete("q");
+      window.history.replaceState({}, "", url.toString());
+      window.dispatchEvent(new Event("search-update"));
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     window.location.href = "/";
@@ -56,7 +82,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 bg-amber-500 border-b border-amber-600 shadow-sm w-full">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4 relative">
        
         {/* Responsive Branding */}
         <Link href="/" className="flex items-center gap-2 text-white font-black text-base sm:text-lg tracking-tight shrink-0">
@@ -69,29 +95,23 @@ export default function Navbar() {
           <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
           <input
             type="text"
-            placeholder="Search fresh produce, farmers..."
+            placeholder="Search fresh produce...."
             defaultValue={typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("q") || "" : ""}
-            onChange={(e) => {
-              const query = e.target.value;
-              if (window.location.pathname !== "/search") {
-                window.location.href = `/search?q=${encodeURIComponent(query)}`;
-              } else {
-                const url = new URL(window.location.href);
-                if (query) url.searchParams.set("q", query);
-                else url.searchParams.delete("q");
-                window.history.replaceState({}, "", url.toString());
-                window.dispatchEvent(new Event("search-update"));
-              }
-            }}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full bg-white text-gray-800 text-xs px-10 py-2.5 rounded-xl border border-transparent shadow-inner focus:outline-none focus:ring-2 focus:ring-amber-600 transition-all"
           />
         </div>
 
         {/* Menu Items */}
         <div className="flex items-center gap-2 sm:gap-4">
-          <Link href="/search" className="sm:hidden p-2 text-white hover:bg-amber-600 rounded-xl transition-colors">
-            <Search size={20} />
-          </Link>
+          {/* Mobile Search Icon Toggle Button */}
+          <button 
+            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+            className="sm:hidden p-2 text-white hover:bg-amber-600 rounded-xl transition-colors cursor-pointer"
+            aria-label="Toggle Mobile Search"
+          >
+            {isMobileSearchOpen ? <X size={20} /> : <Search size={20} />}
+          </button>
 
           {/* Dynamic Authentication Actions Switch Node */}
           {user ? (
@@ -104,7 +124,7 @@ export default function Navbar() {
               </Link>
               <button
                 onClick={handleSignOut}
-                className="text-white hover:text-amber-100 p-1.5 transition-colors"
+                className="text-white hover:text-amber-100 p-1.5 transition-colors cursor-pointer"
                 title="Sign Out"
               >
                 <LogOut size={16} />
@@ -113,7 +133,7 @@ export default function Navbar() {
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="flex items-center gap-1.5 text-white text-xs font-bold hover:opacity-90 transition-opacity"
+              className="flex items-center gap-1.5 text-white text-xs font-bold hover:opacity-90 transition-opacity cursor-pointer"
             >
               <User size={16} />
               <span>Sign In</span>
@@ -130,6 +150,23 @@ export default function Navbar() {
             )}
           </Link>
         </div>
+
+        {/* Fully Responsive Mobile Quick Search Input Box Layer */}
+        {isMobileSearchOpen && (
+          <div className="absolute top-16 left-0 right-0 w-full bg-amber-500 px-4 py-3 border-b border-amber-600 shadow-md sm:hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+              <input
+                ref={mobileInputRef}
+                type="text"
+                placeholder="Search fresh produce.... "
+                defaultValue={typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("q") || "" : ""}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full bg-white text-gray-800 text-xs px-10 py-2.5 rounded-xl border border-transparent shadow-inner focus:outline-none focus:ring-2 focus:ring-amber-700 pointer-events-auto block"
+              />
+            </div>
+          </div>
+        )}
 
       </div>
 
