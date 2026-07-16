@@ -60,7 +60,7 @@ export default function HomePage() {
   const seasonalBadges = useMemo(() => [
     { label: "🌿 100% Certified Organic", color: "bg-emerald-500/10 text-emerald-950 border-emerald-500/20" },
     { label: "🚚 Free Same-Day Logistics", color: "bg-amber-500/10 text-amber-950 border-amber-500/20" },
-    { label: "⭐ Vetted Farm-Gate Payout", color: "bg-emerald-800/10 text-emerald-900 border-emerald-800/20" },
+    { label: "⭐ Vetted Farm-Gate Payout", color: "bg-emerald-800/10 text-emerald-900 border-emerald-500/20" },
     { label: "🥬 Direct Autumn Harvests", color: "bg-stone-500/10 text-stone-900 border-stone-500/20" }
   ], []);
 
@@ -298,8 +298,7 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* Secure Scroll Box with Adaptive Height Limit: 
-              Eliminates nested scrolling bugs on mobile layout viewports to prevent GPU glitching. */}
+          {/* Secure Scroll Box with Adaptive Height Limit */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
               <Loader2 className="animate-spin text-emerald-800" size={32} />
@@ -317,9 +316,9 @@ export default function HomePage() {
               </p>
             </div>
           ) : (
-            <div className="md:max-h-[680px] md:overflow-y-auto pr-0 md:pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
-              {/* Product Grid Layout utilizing robust responsive columns that prevent visual stretching when few cards exist */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pt-2 pb-3">
+            <div className="max-h-[600px] overflow-y-auto pr-1 md:max-h-[680px] md:pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
+              {/* Product Grid Layout: Strictly locked to 2-columns (2*2 style) on mobile, adapting elegantly to larger viewports */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6 pt-2 pb-3">
                 {filteredProducts.map((product) => (
                   <div 
                     key={product.id} 
