@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { createClient } from "../lib/supabase";
 import ProductCard from "../components/ProductCard";
 import type { Product } from "../types";
@@ -56,6 +56,9 @@ export default function HomePage() {
   const supabase = useMemo(() => createClient(), []);
   const isMobile = useMobileDetection();
 
+  // Ref for the auto-scrolling mobile metric grid
+  const metricGridRef = useRef<HTMLDivElement>(null);
+
   // Premium rotating seasonal badges for the Hero section
   const seasonalBadges = useMemo(() => [
     { label: "🌿 100% Certified Organic", color: "bg-emerald-500/10 text-emerald-950 border-emerald-500/20" },
@@ -70,6 +73,64 @@ export default function HomePage() {
     }, 3500);
     return () => clearInterval(timer);
   }, [seasonalBadges.length]);
+
+  // Continuous loop auto-scroll effect for the Metric Grid (Mobile-only)
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const el = metricGridRef.current;
+    if (!el) return;
+
+    let animationFrameId: number;
+    const scrollSpeed = 0.45; // Controls the crawl speed (lower = slower & smoother)
+    let isInteracting = false;
+
+    const performScroll = () => {
+      if (isInteracting) return;
+
+      // Increment scroll position
+      el.scrollLeft += scrollSpeed;
+
+      // Loop back to the start if we hit the end of scrollable width
+      if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
+        el.scrollLeft = 0;
+      }
+
+      animationFrameId = requestAnimationFrame(performScroll);
+    };
+
+    // Begin loop
+    animationFrameId = requestAnimationFrame(performScroll);
+
+    // Pause scrolling when the user touches or interacts with the row
+    const pauseScroll = () => {
+      isInteracting = true;
+    };
+
+    const resumeScroll = () => {
+      isInteracting = false;
+      // Restart loop safety call
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(performScroll);
+    };
+
+    el.addEventListener("touchstart", pauseScroll, { passive: true });
+    el.addEventListener("touchend", resumeScroll, { passive: true });
+    el.addEventListener("mousedown", pauseScroll);
+    el.addEventListener("mouseup", resumeScroll);
+    el.addEventListener("mouseleave", resumeScroll);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      if (el) {
+        el.removeEventListener("touchstart", pauseScroll);
+        el.removeEventListener("touchend", resumeScroll);
+        el.removeEventListener("mousedown", pauseScroll);
+        el.removeEventListener("mouseup", resumeScroll);
+        el.removeEventListener("mouseleave", resumeScroll);
+      }
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     let isMounted = true;
@@ -238,15 +299,18 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Dynamic Mobile/Desktop Metric Grid: Fixed to prevent stacking breaks on mobile layout */}
-        <div className="flex overflow-x-auto md:grid md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 pb-4 md:pb-0 scrollbar-none snap-x snap-mandatory">
+        {/* Dynamic Mobile/Desktop Metric Grid: Auto-scrolls continuously on mobile viewports */}
+        <div 
+          ref={metricGridRef}
+          className="flex overflow-x-auto md:grid md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 pb-4 md:pb-0 scrollbar-none select-none"
+        >
           {[
             { icon: <Users className="text-emerald-800" size={20} />, title: "500+ Trusted Farmers", desc: "Supplying local communities daily" },
             { icon: <ShoppingBag className="text-emerald-800" size={20} />, title: "100+ Variable Yields", desc: "Fresh surplus stock added hourly" },
             { icon: <Truck className="text-emerald-800" size={20} />, title: "Cold Transit Standard", desc: "Strict fresh delivery guarantees" },
             { icon: <ShieldCheck className="text-emerald-800" size={20} />, title: "Zero Chemical Inputs", desc: "Verified natural cultivation logs" },
           ].map((stat, i) => (
-            <div key={i} className="group bg-[#fcfbfa] hover:bg-white border border-stone-200/40 p-5 rounded-2xl shadow-2xs hover:shadow-lg hover:border-emerald-500/20 transition-all duration-300 flex items-center gap-4 min-w-[280px] md:min-w-0 w-full shrink-0 snap-center">
+            <div key={i} className="group bg-[#fcfbfa] hover:bg-white border border-stone-200/40 p-5 rounded-2xl shadow-2xs hover:shadow-lg hover:border-emerald-500/20 transition-all duration-300 flex items-center gap-4 min-w-[280px] md:min-w-0 w-full shrink-0">
               <div className="p-3.5 rounded-xl bg-[#edf1e8] group-hover:scale-110 group-hover:rotate-3 transition-transform shrink-0 flex items-center justify-center">
                 {stat.icon}
               </div>
