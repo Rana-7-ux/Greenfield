@@ -373,12 +373,13 @@ export default function HomePage() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { name: "Rajput & Sons Organics", loc: "Himachal Pradesh", tags: ["Organic Certified", "Root Crops", "Family Owned", "High-Altitude Fresh"] },
-              { name: "Rana Agricultural Farms", loc: "Jharkhand plains", tags: ["Hydroponics", "Leafy Greens", "Pesticide Free", "Technologically Vetted"] },
-              { name: "Indra Tech Cultivation", loc: "Karnataka Orchards", tags: ["Sustainable Irrigation", "Citrus & Fruits", "Rainwater Harvested"] },
+              { name: "Rana Agricultural Farms", loc: "Jharkhand", tags: ["Hydroponics", "Leafy Greens", "Pesticide Free", "Technologically Vetted"] },
+              { name: "Pranay kumar Organics", loc: "Himachal Pradesh", tags: ["Organic Certified", "Root Crops", "Family Owned", "Travel-Ready"] },
+              { name: "Indra Tech Cultivation", loc: "Karnataka", tags: ["Sustainable Irrigation", "Citrus & Fruits", "Rainwater Harvested"] },
               { name: "Yugenger Dairy Farms", loc: "Telangana", tags: ["Fresh produce", "pure milk products", "Family Owned", "High-Demand"] },
               { name: "Manikanta Organics", loc: "Andhra Pradesh", tags: ["Organic Certified", "Root Crops", "Veggies and groceries", "High-Altitude Fresh"] },
               { name: "Vikas Agriculturals", loc: "Madhya Pradesh", tags: ["Sustainable Irrigation", "Citrus & Fruits", "Rainwater Harvested"] },
+              { name: "Pranay Local Farms", loc: "Tamil Nadu", tags: ["Hydroponics", "Leafy Greens", "Pesticide Free", "Technologically Vetted"] },
             ].map((farmer, idx) => (
               <div key={idx} className="bg-[#fcfbfa] border border-stone-200/30 hover:border-emerald-500/20 p-5 rounded-2xl shadow-2xs hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-4 min-w-0 w-full">
                 <div className="space-y-1 min-w-0">
