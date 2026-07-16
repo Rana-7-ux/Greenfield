@@ -318,12 +318,12 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="md:max-h-[680px] md:overflow-y-auto pr-0 md:pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
-              {/* Product Grid Layout utilizing auto-fit column specifications */}
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] sm:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 sm:gap-6 pt-2 pb-3">
+              {/* Product Grid Layout utilizing robust responsive columns that prevent visual stretching when few cards exist */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pt-2 pb-3">
                 {filteredProducts.map((product) => (
                   <div 
                     key={product.id} 
-                    className="group w-full min-w-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl rounded-2xl"
+                    className="group w-full max-w-[280px] mx-auto transition-all duration-300 hover:-translate-y-2 hover:shadow-xl rounded-2xl"
                   >
                     <ProductCard product={product} />
                   </div>
@@ -371,7 +371,7 @@ export default function HomePage() {
             <p className="text-[11px] sm:text-xs font-semibold text-stone-400">Discover some of our leading direct-supplier farming estates.</p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pt-2 pb-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
               { name: "Rana Agricultural Farms", loc: "Jharkhand", tags: ["Hydroponics", "Leafy Greens", "Pesticide Free", "Technologically Vetted"] },
               { name: "Pranay kumar Organics", loc: "Himachal Pradesh", tags: ["Organic Certified", "Root Crops", "Family Owned", "Travel-Ready"] },
@@ -414,29 +414,29 @@ export default function HomePage() {
               An agro-marketplace standard designed to guarantee clean market pricing models directly back to original agricultural operators.
             </p>
             <div className="flex items-center gap-3 text-stone-400 pt-1">
-  {/* Twitter / X SVG */}
-  <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Twitter">
-    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  </a>
-  
-  {/* Instagram SVG */}
-  <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Instagram">
-    <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-    </svg>
-  </a>
-  
-  {/* Facebook SVG */}
-  <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Facebook">
-    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-      <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.8z" />
-    </svg>
-  </a>
-</div>
+              {/* Twitter / X SVG */}
+              <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Twitter">
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
+              
+              {/* Instagram SVG */}
+              <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Instagram">
+                <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                </svg>
+              </a>
+              
+              {/* Facebook SVG */}
+              <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Facebook">
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.8z" />
+                </svg>
+              </a>
+            </div>
           </div>
           
           {/* Links Cols */}
