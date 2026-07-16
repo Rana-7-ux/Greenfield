@@ -10,7 +10,23 @@ import {
   MapPin, Milestone, HelpCircle, FileText, Globe
 } from "lucide-react";
 
-// Senior Engineering Pattern: Static constant extraction prevents allocations on re-renders
+// Hook to safely check device layout on the client side without Next.js SSR hydration mismatches
+function useMobileDetection() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkSize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkSize();
+    window.addEventListener("resize", checkSize);
+    return () => window.removeEventListener("resize", checkSize);
+  }, []);
+
+  return isMobile;
+}
+
 const CATEGORIES = ["All Fresh", "Vegetables", "Fruits", "Grains", "Dairy", "Organic"] as const;
 
 const KEYWORD_MAP = {
@@ -36,6 +52,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number]>("All Fresh");
   const supabase = useMemo(() => createClient(), []);
+  const isMobile = useMobileDetection();
 
   useEffect(() => {
     let isMounted = true;
@@ -100,7 +117,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-stone-800 w-full relative overflow-x-hidden antialiased selection:bg-emerald-100 selection:text-emerald-900">
       
-      {/* Background Ambience Layers: Offloaded entirely via standard display properties on small viewports */}
+      {/* Background Ambience Layers */}
       <div className="hidden lg:block absolute top-0 right-0 w-[700px] h-[600px] bg-emerald-100/30 rounded-full blur-3xl pointer-events-none -z-10 translate-x-1/4 -translate-y-1/4" />
       <div className="hidden lg:block absolute top-[25%] left-0 w-[600px] h-[600px] bg-amber-100/20 rounded-full blur-3xl pointer-events-none -z-10 -translate-x-1/4" />
 
@@ -202,7 +219,8 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* Secure Vertical Scroll Box */}
+          {/* Secure Scroll Box with Adaptive Height Limit: 
+              Eliminates nested scrolling bugs on mobile layout viewports to prevent GPU glitching. */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-16 gap-2">
               <Loader2 className="animate-spin text-emerald-800" size={24} />
@@ -217,7 +235,7 @@ export default function HomePage() {
               </p>
             </div>
           ) : (
-            <div className="max-h-[520px] sm:max-h-[640px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
+            <div className="md:max-h-[640px] md:overflow-y-auto pr-0 md:pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4 pt-1 pb-2">
                 {filteredProducts.map((product) => (
                   <div key={product.id} className="w-full min-w-0 transition-all duration-200 sm:hover:-translate-y-0.5">
