@@ -238,15 +238,15 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Dynamic Mobile/Desktop Metric Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* Dynamic Mobile/Desktop Metric Grid: Fixed to prevent stacking breaks on mobile layout */}
+        <div className="flex overflow-x-auto md:grid md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 pb-4 md:pb-0 scrollbar-none snap-x snap-mandatory">
           {[
             { icon: <Users className="text-emerald-800" size={20} />, title: "500+ Trusted Farmers", desc: "Supplying local communities daily" },
             { icon: <ShoppingBag className="text-emerald-800" size={20} />, title: "100+ Variable Yields", desc: "Fresh surplus stock added hourly" },
             { icon: <Truck className="text-emerald-800" size={20} />, title: "Cold Transit Standard", desc: "Strict fresh delivery guarantees" },
             { icon: <ShieldCheck className="text-emerald-800" size={20} />, title: "Zero Chemical Inputs", desc: "Verified natural cultivation logs" },
           ].map((stat, i) => (
-            <div key={i} className="group bg-[#fcfbfa] hover:bg-white border border-stone-200/40 p-5 rounded-2xl shadow-2xs hover:shadow-lg hover:border-emerald-500/20 transition-all duration-300 flex items-center gap-4 w-full min-w-0">
+            <div key={i} className="group bg-[#fcfbfa] hover:bg-white border border-stone-200/40 p-5 rounded-2xl shadow-2xs hover:shadow-lg hover:border-emerald-500/20 transition-all duration-300 flex items-center gap-4 min-w-[280px] md:min-w-0 w-full shrink-0 snap-center">
               <div className="p-3.5 rounded-xl bg-[#edf1e8] group-hover:scale-110 group-hover:rotate-3 transition-transform shrink-0 flex items-center justify-center">
                 {stat.icon}
               </div>
