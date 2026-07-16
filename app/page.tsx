@@ -298,8 +298,7 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* Secure Scroll Box with Adaptive Height Limit: 
-              Eliminates nested scrolling bugs on mobile layout viewports to prevent GPU glitching. */}
+          {/* Secure Scroll Box with Adaptive Height Limit */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
               <Loader2 className="animate-spin text-emerald-800" size={32} />
@@ -318,7 +317,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="md:max-h-[680px] md:overflow-y-auto pr-0 md:pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
-              {/* Product Grid Layout utilizing robust responsive columns that prevent visual stretching when few cards exist */}
+              {/* Product Grid Layout utilizing responsive column counts */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pt-2 pb-3">
                 {filteredProducts.map((product) => (
                   <div 
@@ -333,8 +332,8 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Operational Roadmap Layout */}
-        <div className="bg-[#edf1e8]/60 rounded-2xl sm:rounded-3xl p-6 sm:p-10 border border-emerald-200/20 space-y-6 sm:space-y-8">
+        {/* Operational Roadmap Layout - Cleaned grid and isolation to prevent CSS graphic cracking on Desktop */}
+        <div className="bg-[#edf1e8]/60 rounded-2xl sm:rounded-3xl p-6 sm:p-10 border border-emerald-200/20 space-y-6 sm:space-y-8 isolation-auto">
           <div className="text-center max-w-md mx-auto space-y-1">
             <h3 className="text-xs sm:text-sm font-black text-stone-900 tracking-tight flex items-center justify-center gap-1.5">
               <Milestone size={16} className="text-emerald-800 animate-pulse" /> Operational Flow
@@ -350,12 +349,12 @@ export default function HomePage() {
               { num: "02", icon: <HeartHandshake size={16} />, label: "Secured Escrow Checkout", text: "Customer places order; 100% of base value locks into grower payout ledger." },
               { num: "03", icon: <MapPin size={16} />, label: "Cold Transit Delivery", text: "Produce goes straight from farm gate to logistics van within hours." }
             ].map((step, idx) => (
-              <div key={idx} className="bg-[#fcfbfa] hover:bg-white p-5 rounded-2xl border border-stone-200/30 space-y-3 relative shadow-2xs hover:shadow-lg transition-all duration-300 min-w-0 w-full">
-                <span className="absolute top-4 right-5 text-2xl font-black text-stone-200/60 font-mono select-none">{step.num}</span>
-                <div className="p-3 w-fit rounded-xl bg-[#edf1e8] text-emerald-800 flex items-center justify-center shadow-2xs">
+              <div key={idx} className="bg-[#fcfbfa] hover:bg-white p-5 rounded-2xl border border-stone-200/30 space-y-3 relative shadow-2xs hover:shadow-lg transition-all duration-300 min-w-0 w-full overflow-hidden">
+                <span className="absolute top-4 right-5 text-2xl font-black text-stone-200/60 font-mono select-none z-0">{step.num}</span>
+                <div className="p-3 w-fit rounded-xl bg-[#edf1e8] text-emerald-800 flex items-center justify-center shadow-2xs relative z-10">
                   {step.icon}
                 </div>
-                <div className="space-y-1 min-w-0">
+                <div className="space-y-1 min-w-0 relative z-10">
                   <h4 className="text-xs sm:text-sm font-black text-stone-900 truncate">{step.label}</h4>
                   <p className="text-[10px] sm:text-xs text-stone-500 leading-relaxed font-semibold">{step.text}</p>
                 </div>
@@ -414,14 +413,14 @@ export default function HomePage() {
               An agro-marketplace standard designed to guarantee clean market pricing models directly back to original agricultural operators.
             </p>
             <div className="flex items-center gap-3 text-stone-400 pt-1">
-              {/* Twitter / X SVG */}
+              {/* Custom SVG Twitter */}
               <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Twitter">
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </a>
               
-              {/* Instagram SVG */}
+              {/* Custom SVG Instagram */}
               <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Instagram">
                 <svg className="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
@@ -430,7 +429,7 @@ export default function HomePage() {
                 </svg>
               </a>
               
-              {/* Facebook SVG */}
+              {/* Custom SVG Facebook */}
               <a href="#" className="hover:text-emerald-800 transition-colors" aria-label="Facebook">
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                   <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c4.56-.93 8-4.96 8-9.8z" />
