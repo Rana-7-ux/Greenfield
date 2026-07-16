@@ -317,7 +317,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="max-h-[600px] overflow-y-auto pr-1 md:max-h-[680px] md:pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
-              {/* Product Grid Layout: Strictly locked to 2-columns (2*2 style) on mobile, adapting elegantly to larger viewports */}
+              {/* Product Grid Layout: ONLY this wrapper has the 2-column rule applied on mobile screens */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6 pt-2 pb-3">
                 {filteredProducts.map((product) => (
                   <div 
