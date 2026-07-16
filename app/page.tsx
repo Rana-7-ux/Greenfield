@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { createClient } from "../lib/supabase";
-import Navbar from "../components/Navbar";
 import ProductCard from "../components/ProductCard";
 import type { Product } from "../types";
 import {
@@ -11,16 +10,37 @@ import {
   MapPin, Milestone, HelpCircle, FileText, Globe
 } from "lucide-react";
 
+// Senior Engineering Pattern: Static constant extraction prevents allocations on re-renders
+const CATEGORIES = ["All Fresh", "Vegetables", "Fruits", "Grains", "Dairy", "Organic"] as const;
+
+const KEYWORD_MAP = {
+  Fruits: [
+    "orange", "apple", "banana", "mango", "strawberry", "strawberries", "grape", "berry", "berries",
+    "citrus", "lemon", "lime", "peach", "plum", "pear", "watermelon", "melon", "papaya", 
+    "pomegranate", "pineapple", "cherry", "guava", "kiwi"
+  ],
+  Grains: [
+    "basmati", "grain", "rice", "wheat", "oat", "barley", "millet", "flour", "pulses", 
+    "dal", "lentil", "corn"
+  ],
+  Dairy: [
+    "milk", "cheese", "butter", "paneer", "ghee", "curd", "yogurt", "cream"
+  ],
+  Organic: [
+    "mustard", "oil", "honey", "organic", "spice", "turmeric", "herbal"
+  ]
+} as const;
+
 export default function HomePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState("All Fresh");
-
-  const categories = ["All Fresh", "Vegetables", "Fruits", "Grains", "Dairy", "Organic"];
-  const supabase = createClient();
+  const [selectedCategory, setSelectedCategory] = useState<typeof CATEGORIES[number]>("All Fresh");
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
-    async function initCatalogStream() {
+    let isMounted = true;
+
+    async function fetchCatalog() {
       try {
         const { data, error } = await supabase
           .from('products')
@@ -29,41 +49,21 @@ export default function HomePage() {
 
         if (error) throw error;
         
-        if (data) {
-          const mappedData = (data as any[]).map((item) => {
+        if (data && isMounted) {
+          const mappedData: Product[] = (data as any[]).map((item) => {
             let itemCategory = "Vegetables";
-            if (item.category && item.category.trim() !== "") {
+            
+            if (item.category?.trim()) {
               itemCategory = item.category.trim();
             } else {
               const titleLower = item.title?.toLowerCase() || "";
               
-              const fruitKeywords = [
-                "orange", "apple", "banana", "mango", "strawberry", "strawberries", "grape", "berry", "berries",
-                "citrus", "lemon", "lime", "peach", "plum", "pear", "watermelon",
-                "melon", "papaya", "pomegranate", "pineapple", "cherry", "guava", "kiwi"
-              ];
+              const matchedCategory = Object.entries(KEYWORD_MAP).find(([_, keywords]) =>
+                keywords.some(keyword => titleLower.includes(keyword))
+              );
 
-              const grainKeywords = [
-                "basmati", "grain", "rice", "wheat", "oat", "barley", "millet",
-                "flour", "pulses", "dal", "lentil", "corn"
-              ];
-
-              const dairyKeywords = [
-                "milk", "cheese", "butter", "paneer", "ghee", "curd", "yogurt", "cream"
-              ];
-
-              const organicKeywords = [
-                "mustard", "oil", "honey", "organic", "spice", "turmeric", "herbal"
-              ];
-
-              if (fruitKeywords.some(keyword => titleLower.includes(keyword))) {
-                itemCategory = "Fruits";
-              } else if (grainKeywords.some(keyword => titleLower.includes(keyword))) {
-                itemCategory = "Grains";
-              } else if (dairyKeywords.some(keyword => titleLower.includes(keyword))) {
-                itemCategory = "Dairy";
-              } else if (organicKeywords.some(keyword => titleLower.includes(keyword))) {
-                itemCategory = "Organic";
+              if (matchedCategory) {
+                itemCategory = matchedCategory[0];
               }
             }
             
@@ -73,33 +73,36 @@ export default function HomePage() {
               image_url: item.image_url || item.image || null
             };
           });
-          setProducts(mappedData as Product[]);
+
+          setProducts(mappedData);
         }
       } catch (err) {
-        console.error("Database tracking link failed:", err);
+        console.error("Critical database synchronization failure:", err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
-    initCatalogStream();
+
+    fetchCatalog();
+
+    return () => {
+      isMounted = false;
+    };
   }, [supabase]);
 
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === "All Fresh") {
-      return products;
-    }
-    return products.filter((product) => {
-      if (!product.category) return false;
-      return product.category.toLowerCase() === selectedCategory.toLowerCase();
-    });
+    if (selectedCategory === "All Fresh") return products;
+    return products.filter((product) => 
+      product.category?.toLowerCase() === selectedCategory.toLowerCase()
+    );
   }, [products, selectedCategory]);
 
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-stone-800 w-full relative overflow-x-hidden antialiased selection:bg-emerald-100 selection:text-emerald-900">
       
-      {/* Background Gradients: Isolated with will-change-transform to prevent hardware-accelerated mobile blurring */}
-      <div className="hidden lg:block absolute top-0 right-0 w-[700px] h-[600px] bg-emerald-100/30 rounded-full blur-3xl pointer-events-none -z-10 translate-x-1/4 -translate-y-1/4 will-change-transform" />
-      <div className="hidden lg:block absolute top-[25%] left-0 w-[600px] h-[600px] bg-amber-100/20 rounded-full blur-3xl pointer-events-none -z-10 -translate-x-1/4 will-change-transform" />
+      {/* Background Ambience Layers: Offloaded entirely via standard display properties on small viewports */}
+      <div className="hidden lg:block absolute top-0 right-0 w-[700px] h-[600px] bg-emerald-100/30 rounded-full blur-3xl pointer-events-none -z-10 translate-x-1/4 -translate-y-1/4" />
+      <div className="hidden lg:block absolute top-[25%] left-0 w-[600px] h-[600px] bg-amber-100/20 rounded-full blur-3xl pointer-events-none -z-10 -translate-x-1/4" />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-10 relative space-y-6 sm:space-y-12">
         
@@ -128,10 +131,7 @@ export default function HomePage() {
 
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
               <button
-                onClick={() => {
-                  const el = document.getElementById("catalog-section");
-                  el?.scrollIntoView({ behavior: "smooth" });
-                }}
+                onClick={() => document.getElementById("catalog-section")?.scrollIntoView({ behavior: "smooth" })}
                 className="bg-emerald-800 hover:bg-emerald-950 active:scale-[0.98] transition-all text-white font-bold text-xs px-5 py-3.5 rounded-xl flex items-center justify-center gap-2 shadow-xs cursor-pointer"
               >
                 <span>Browse Available Yields</span>
@@ -154,7 +154,7 @@ export default function HomePage() {
             { icon: <ShieldCheck className="text-emerald-800" size={18} />, title: "Organic Produce", desc: "Zero chemical agent inputs" },
           ].map((stat, i) => (
             <div key={i} className="bg-[#fcfbfa] border border-stone-200/40 p-3.5 rounded-xl sm:rounded-2xl shadow-xs flex items-center gap-3 w-full min-w-0">
-              <div className="p-2.5 rounded-xl bg-[#edf1e8] shrink-0">
+              <div className="p-2.5 rounded-xl bg-[#edf1e8] shrink-0 flex items-center justify-center">
                 {stat.icon}
               </div>
               <div className="space-y-0.5 min-w-0 flex-1">
@@ -184,7 +184,7 @@ export default function HomePage() {
 
           {/* Categories Tab Bar */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {categories.map((cat) => {
+            {CATEGORIES.map((cat) => {
               const isActive = selectedCategory === cat;
               return (
                 <button
@@ -217,7 +217,7 @@ export default function HomePage() {
               </p>
             </div>
           ) : (
-            <div className="max-h-[520px] sm:max-h-[640px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent path-layer">
+            <div className="max-h-[520px] sm:max-h-[640px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4 pt-1 pb-2">
                 {filteredProducts.map((product) => (
                   <div key={product.id} className="w-full min-w-0 transition-all duration-200 sm:hover:-translate-y-0.5">
@@ -248,7 +248,7 @@ export default function HomePage() {
             ].map((step, idx) => (
               <div key={idx} className="bg-[#fcfbfa] p-4 rounded-xl border border-stone-200/30 space-y-2 relative shadow-xs min-w-0 w-full">
                 <span className="absolute top-3 right-4 text-lg font-black text-stone-200/60 font-mono">{step.num}</span>
-                <div className="p-2 w-fit rounded-lg bg-[#edf1e8] text-emerald-800">
+                <div className="p-2 w-fit rounded-lg bg-[#edf1e8] text-emerald-800 flex items-center justify-center">
                   {step.icon}
                 </div>
                 <div className="space-y-0.5 min-w-0">

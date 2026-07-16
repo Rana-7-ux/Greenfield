@@ -1,37 +1,63 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "../../lib/supabase";
+import ProductCard from "../../components/ProductCard";
+import type { Product } from "../../types";
 import { Loader2, Search } from "lucide-react";
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get("q") || "";
-  const [results, setResults] = useState<any[]>([]);
+  
+  const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+  
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
+    let isMounted = true;
+
     const executeSearch = async () => {
-      if (!query.trim()) {
+      const sanitizedQuery = query.trim();
+      if (!sanitizedQuery) {
         setResults([]);
         return;
       }
+      
       setLoading(true);
       
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .ilike("title", `%${query}%`);
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select("id, title, price, inventory_qty, farmerName:farmer_name, category, image_url, image")
+          .ilike("title", `%${sanitizedQuery}%`);
 
-      if (!error && data) {
-        setResults(data);
+        if (error) throw error;
+        
+        if (data && isMounted) {
+          // Normalize payload keys so they precisely adhere to the shared Product contract
+          const mappedResults: Product[] = (data as any[]).map((item) => ({
+            ...item,
+            farmerName: item.farmerName || "Regional Farm",
+            image_url: item.image_url || item.image || null
+          }));
+          
+          setResults(mappedResults);
+        }
+      } catch (err) {
+        console.error("Failure executing catalog lookup parameters:", err);
+      } finally {
+        if (isMounted) setLoading(false);
       }
-      setLoading(false);
     };
 
     executeSearch();
+
+    return () => {
+      isMounted = false;
+    };
   }, [query, supabase]);
 
   return (
@@ -43,10 +69,10 @@ export default function SearchPage() {
           <h1 className="text-lg sm:text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2">
             <Search className="text-emerald-800 shrink-0" size={20} />
             <span>Search Results for:</span>
-            <span className="text-emerald-700 italic font-extrabold">"{query || ''}"</span>
+            <span className="text-emerald-700 italic font-extrabold">"{query}"</span>
           </h1>
           <p className="text-[11px] sm:text-xs font-semibold text-stone-400 mt-1">
-            Found {results.length} active crop batches matching your entry phrase.
+            Found {results.length} active crop {results.length === 1 ? 'batch' : 'batches'} matching your entry phrase.
           </p>
         </div>
        
@@ -65,44 +91,13 @@ export default function SearchPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-5">
-            {results.map((item) => (
-              <div 
-                key={item.id} 
-                className="bg-[#fcfbfa] border border-stone-200/40 p-3 rounded-xl sm:rounded-2xl shadow-xs flex flex-col justify-between h-full group transition-all duration-200 sm:hover:-translate-y-0.5"
-              >
-                <div className="space-y-2">
-                  {/* Fixed Aspect Image Box container */}
-                  <div className="w-full aspect-square bg-stone-100 rounded-lg sm:rounded-xl overflow-hidden relative">
-                    {item.image_url || item.image ? (
-                      <img 
-                        src={item.image_url || item.image} 
-                        alt={item.title} 
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" 
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xl bg-stone-100">🥦</div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-0.5 min-w-0 px-0.5">
-                    <h3 className="text-xs font-black text-stone-900 truncate tracking-tight">{item.title}</h3>
-                    <p className="text-[10px] font-bold text-stone-400 truncate flex items-center gap-0.5">
-                      🚜 <span className="truncate">{item.farmer_name || item.farmerName || "Regional Farm"}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-2 mt-2 border-t border-stone-100 flex items-center justify-between gap-1">
-                  <span className="text-xs font-black text-emerald-800 whitespace-nowrap">
-                    ₹{item.price}<span className="text-[9px] font-semibold text-stone-400">/kg</span>
-                  </span>
-                  {item.inventory_qty !== undefined && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/30 whitespace-nowrap">
-                      {item.inventory_qty} kg left
-                    </span>
-                  )}
-                </div>
+          /* Senior Engineering implementation: Consuming the unified global <ProductCard /> 
+             guarantees basket functionalities, asset layers, and responsive behaviors remain uniform.
+          */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4 pt-1 pb-2">
+            {results.map((product) => (
+              <div key={product.id} className="w-full min-w-0 transition-all duration-200 sm:hover:-translate-y-0.5">
+                <ProductCard product={product} />
               </div>
             ))}
           </div>
