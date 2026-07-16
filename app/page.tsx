@@ -11,6 +11,7 @@ import {
   CheckCircle2, ArrowUpRight
 } from "lucide-react";
 
+// Hook to safely check device layout on the client side without Next.js SSR hydration mismatches
 function useMobileDetection() {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -55,6 +56,7 @@ export default function HomePage() {
   const supabase = useMemo(() => createClient(), []);
   const isMobile = useMobileDetection();
 
+  // Premium rotating seasonal badges for the Hero section
   const seasonalBadges = useMemo(() => [
     { label: "🌿 100% Certified Organic", color: "bg-emerald-500/10 text-emerald-950 border-emerald-500/20" },
     { label: "🚚 Free Same-Day Logistics", color: "bg-amber-500/10 text-amber-950 border-amber-500/20" },
@@ -134,10 +136,13 @@ export default function HomePage() {
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12 space-y-8 sm:space-y-16">
         
-        {/* Hero Plate */}
+        {/* Responsive Hero Plate */}
         <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden bg-gradient-to-br from-[#e8ece3] via-[#edf1e8] to-[#f4f6f0] p-6 sm:p-14 border border-emerald-200/40 shadow-sm">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            {/* Left Column: Text Content */}
             <div className="lg:col-span-7 space-y-6">
+              
+              {/* Rotating Badge Indicator */}
               <div className="inline-block min-w-[240px]">
                 <div className={`transition-all duration-500 transform px-4 py-2 rounded-full border text-[11px] font-black tracking-wide uppercase flex items-center gap-2 w-fit ${seasonalBadges[currentBadgeIndex].color}`}>
                   <span className="flex h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
@@ -156,6 +161,7 @@ export default function HomePage() {
                 Eliminate multi-week processing storage hubs. Greenfield routes direct agricultural batches from regional agrarian fields right to residential thresholds under a transparent pricing structure.
               </p>
 
+              {/* Action Buttons */}
               <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full">
                 <button
                   onClick={() => document.getElementById("catalog-section")?.scrollIntoView({ behavior: "smooth" })}
@@ -171,6 +177,7 @@ export default function HomePage() {
               </div>
             </div>
 
+            {/* Right Column: Premium Decorative Media Box */}
             <div className="hidden lg:col-span-5 relative w-full h-[320px] flex items-center justify-center">
               <div className="relative w-full h-full flex items-center justify-center">
                 <div className="absolute top-4 left-6 bg-white border border-stone-200/30 p-3 rounded-2xl shadow-xl flex items-center gap-3">
@@ -216,7 +223,7 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Dynamic Metric Grid */}
+        {/* Dynamic Mobile/Desktop Metric Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {[
             { icon: <Users className="text-emerald-800" size={20} />, title: "500+ Trusted Farmers", desc: "Supplying local communities daily" },
@@ -237,7 +244,7 @@ export default function HomePage() {
         </div>
 
         {/* Marketplace Plate */}
-        <div id="catalog-section" className="bg-white border border-stone-200/40 rounded-2xl sm:rounded-3xl p-4 sm:p-8 space-y-6 shadow-xs relative">
+        <div id="catalog-section" className="bg-white border border-stone-200/40 rounded-2xl sm:rounded-3xl p-5 sm:p-8 space-y-6 shadow-xs relative">
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-stone-200/60">
             <div className="space-y-1.5">
@@ -256,7 +263,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* STICKY TAGS: Locked securely back into the top parameters */}
+          {/* Sticky Categories Bar */}
           <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md py-3 border-b border-stone-100 flex items-center gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
             {CATEGORIES.map((cat) => {
               const isActive = selectedCategory === cat;
@@ -276,7 +283,7 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* Catalog Layout */}
+          {/* Catalog Container */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
               <Loader2 className="animate-spin text-emerald-800" size={32} />
@@ -289,16 +296,14 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="w-full">
-              {/* RESPONSIVE SCROLLER:
-                  - Mobile: Renders as a beautiful, native horizontal swiper (`flex flex-nowrap overflow-x-auto pb-4 snap-x`).
-                  - Desktop: Automatically scales back into your beautiful Multi-Column Grid (`md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5`).
+              {/* CLEVER DESIGN ADAPTATION:
+                - Mobile: Displays in a neat 2x2 grid (2 columns) inside a custom scroll container 
+                  with a max height (`max-h-[580px]`) and vertical scrollbar on the right (`overflow-y-auto pr-1`).
+                - PC/Desktop: Naturally resets to the beautiful wide horizontal layout (`md:max-h-none md:overflow-y-visible md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5`).
               */}
-              <div className="flex flex-nowrap overflow-x-auto gap-4 snap-x pb-4 scrollbar-thin md:grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-6 pt-2 w-full">
+              <div className="grid grid-cols-2 gap-3 max-h-[580px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent md:max-h-none md:overflow-y-visible md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-6 pt-2 w-full">
                 {filteredProducts.map((product) => (
-                  <div 
-                    key={product.id} 
-                    className="w-[260px] shrink-0 snap-start md:w-full md:shrink md:snap-align-none"
-                  >
+                  <div key={product.id} className="w-full block">
                     <ProductCard product={product} />
                   </div>
                 ))}
