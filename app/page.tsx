@@ -317,12 +317,12 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="md:max-h-[680px] md:overflow-y-auto pr-0 md:pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
-              {/* Product Grid Layout utilizing responsive column counts */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pt-2 pb-3">
+              {/* MODIFIED: Changed grid columns to "grid-cols-3" on mobile devices with tight gaps ("gap-1.5") and kept standard widths for desktop layout */}
+              <div className="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 sm:gap-6 pt-2 pb-3">
                 {filteredProducts.map((product) => (
                   <div 
                     key={product.id} 
-                    className="group w-full max-w-[280px] mx-auto transition-all duration-300 hover:-translate-y-2 hover:shadow-xl rounded-2xl"
+                    className="group w-full sm:max-w-[280px] mx-auto transition-all duration-300 hover:-translate-y-2 hover:shadow-xl rounded-2xl"
                   >
                     <ProductCard product={product} />
                   </div>
