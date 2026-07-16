@@ -371,7 +371,7 @@ export default function HomePage() {
             <p className="text-[11px] sm:text-xs font-semibold text-stone-400">Discover some of our leading direct-supplier farming estates.</p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 pt-2 pb-3">
             {[
               { name: "Rana Agricultural Farms", loc: "Jharkhand", tags: ["Hydroponics", "Leafy Greens", "Pesticide Free", "Technologically Vetted"] },
               { name: "Pranay kumar Organics", loc: "Himachal Pradesh", tags: ["Organic Certified", "Root Crops", "Family Owned", "Travel-Ready"] },
